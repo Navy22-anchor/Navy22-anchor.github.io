@@ -137,7 +137,7 @@
 
 .category:hover,
 .categoryActive {
-  color: var(--color-black);
+  color: var(--color-text);
 }
 
 /* "+" 대신 나타나는 이름 입력칸: 목록 글자와 같은 크기 */
@@ -148,7 +148,7 @@
   border: 0;
   outline: none;
   background: none;
-  color: var(--color-black);
+  color: var(--color-text);
   font: inherit;
   line-height: inherit;
 }
@@ -184,6 +184,10 @@
 .index { right: 22px; }
 
 /* --brace-offset: 가운데 콘텐츠 크기에 맞춘 중괄호 거리 (ProjectStrip이 설정) */
+/* 검은 중괄호 SVG: 다크 모드에서 흰색으로 */
+.braceLeft,
+.braceRight { filter: var(--color-icon-filter); }
+
 .braceLeft { left: calc(50% - var(--brace-offset, 369px) - 71px); }
 .braceRight { left: calc(50% + var(--brace-offset, 369px)); }
 
@@ -213,7 +217,7 @@
   /* 타일 위로 글자가 겹치지 않게 상·하단에 흰 띠 */
   .header {
     height: 84px;
-    background: var(--color-white);
+    background: var(--color-bg);
   }
 
   .braceLeft,
@@ -227,7 +231,7 @@
     top: auto;
     bottom: 0;
     height: 76px;
-    background: var(--color-white);
+    background: var(--color-bg);
   }
 
   .focus > * {

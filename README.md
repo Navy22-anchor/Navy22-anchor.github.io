@@ -19,3 +19,11 @@ npm run dev
 
 `main`에 푸시하면 `.github/workflows/deploy.yml`이 빌드해서 GitHub Pages에 배포합니다.
 (저장소 Settings → Pages → Source를 **GitHub Actions**로 설정해야 합니다.)
+
+## 디자인
+
+- 랜딩 페이지 : https://obys.agency/?ref=minimal.gallery
+- Design Direcor : Viacheslav Olianishyn
+- Creative Director : Olha Olianshihyna
+- Developer : Surya Aditya
+- Published : May 17, 2026

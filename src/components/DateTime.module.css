@@ -2,6 +2,9 @@
   --dt-blue: #0088ff;
   --dt-tertiary: rgb(60 60 67 / 0.3);
   --dt-fill: rgb(118 118 128 / 0.12);
+  --dt-fill-hover: rgb(118 118 128 / 0.2);
+  --dt-panel: rgb(255 255 255 / 0.85);
+  --dt-separator: rgb(0 0 0 / 0.12);
 
   position: relative;
   display: flex;
@@ -29,7 +32,7 @@
 
 .dateButton:hover,
 .dateButton[aria-expanded='true'] {
-  background: rgb(118 118 128 / 0.2);
+  background: var(--dt-fill-hover);
 }
 
 /* ── 달력 (Figma "Date and time - Pickers", 370 폭) ── */
@@ -41,10 +44,10 @@
   width: 370px;
   border-radius: 13px;
   overflow: hidden;
-  background: rgb(255 255 255 / 0.85);
+  background: var(--dt-panel);
   backdrop-filter: blur(50px);
   box-shadow: 0 10px 30px rgb(0 0 0 / 0.1);
-  color: var(--color-black);
+  color: var(--color-text);
   pointer-events: auto;
 }
 
@@ -148,7 +151,7 @@ button.day:hover {
   align-items: center;
   height: 52px;
   margin: 11px 16px 0;
-  border-top: 0.5px solid rgb(0 0 0 / 0.12);
+  border-top: 0.5px solid var(--dt-separator);
   font-size: 17px;
   line-height: 22px;
   letter-spacing: -0.43px;
@@ -160,4 +163,16 @@ button.day:hover {
   font-size: 17px;
   line-height: 22px;
   letter-spacing: -0.43px;
+}
+
+/* 다크 모드: iOS Colors 컬렉션의 Dark 값 */
+@media (prefers-color-scheme: dark) {
+  .dateTime {
+    --dt-blue: #0091ff;
+    --dt-tertiary: rgb(235 235 245 / 0.3);
+    --dt-fill: rgb(118 118 128 / 0.24);
+    --dt-fill-hover: rgb(118 118 128 / 0.36);
+    --dt-panel: rgb(30 30 30 / 0.85);
+    --dt-separator: rgb(255 255 255 / 0.15);
+  }
 }

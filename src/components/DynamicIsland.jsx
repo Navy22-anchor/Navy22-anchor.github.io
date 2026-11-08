@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import artwork from '../assets/music-artwork.png';
 import styles from './DynamicIsland.module.css';
 
 // 작은 아일랜드에 마우스를 올리거나 포커스하면 Figma "Dynamic Island" (44:788) 재생기로 펼쳐짐.
 // 검은 껍데기 하나가 가운데를 기준으로 커지고, 안의 내용만 바뀜 (Figma "Island hover motion" 92:652)
-// 소리는 iTunes Search API의 30초 미리듣기 (무료, 키 없음). 주소가 바뀔 수 있어 열 때마다 곡 ID로 새로 받아 옴
+// 소리와 앨범 표지는 iTunes Search API에서 받아 옴 (무료, 키 없음). 주소가 바뀔 수 있어 열 때마다 곡 ID로 새로 받음
+// 표지는 저작권이 음반사에 있어 저장소에 넣지 않고 Apple 서버의 이미지를 그대로 씀
 const ITUNES_TRACK_ID = 1508562516; // Glass Animals - Heat Waves (Dreamland)
 const SEEK_STEP = 10;
 
@@ -41,6 +41,12 @@ function Waveform({ playing }) {
   );
 }
 
+// 표지를 받기 전에는 같은 크기의 빈 자리
+function Artwork({ className, src, size }) {
+  if (!src) return <span className={`${className} ${styles.artworkEmpty}`} aria-hidden="true" />;
+  return <img className={className} src={src} alt="" width={size} height={size} />;
+}
+
 export default function DynamicIsland({
   title = 'Heat Waves',
   artist = 'Glass Animals',
@@ -52,6 +58,7 @@ export default function DynamicIsland({
   const [playing, setPlaying] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [duration, setDuration] = useState(30);
+  const [artwork, setArtwork] = useState('');
 
   // 미리듣기 주소를 받아 오디오를 준비. 30초가 끝나면 처음부터 반복
   useEffect(() => {
@@ -77,8 +84,10 @@ export default function DynamicIsland({
     fetch(`https://itunes.apple.com/lookup?id=${trackId}&country=KR`, { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => {
-        const url = data.results?.[0]?.previewUrl;
-        if (url) audio.src = url;
+        const track = data.results?.[0];
+        if (track?.previewUrl) audio.src = track.previewUrl;
+        // 100×100이 기본. 큰 표지(53px)가 고해상도 화면에서도 선명하게 160으로 요청
+        if (track?.artworkUrl100) setArtwork(track.artworkUrl100.replace('100x100bb', '160x160bb'));
       })
       .catch(() => {}); // 못 받으면 재생 버튼만 비활성
 
@@ -123,14 +132,14 @@ export default function DynamicIsland({
           aria-pressed={playing}
           aria-label={playing ? `${title} 일시정지` : `${title} 재생`}
         >
-          <img className={styles.artwork} src={artwork} alt="" width="24" height="24" />
+          <Artwork className={styles.artwork} src={artwork} size={24} />
           <span className={styles.title}>{titleText}</span>
           <Waveform playing={playing} />
         </button>
 
         <div className={styles.expanded} role="group" aria-label="지금 재생 중">
           <div className={styles.metadata}>
-            <img className={styles.bigArtwork} src={artwork} alt="" width="53" height="53" />
+            <Artwork className={styles.bigArtwork} src={artwork} size={53} />
             <div className={styles.content}>
               <div className={styles.headline}>
                 <span className={styles.title}>{titleText}</span>

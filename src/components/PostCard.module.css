@@ -2,8 +2,8 @@
   display: flex;
   gap: 16px;
   padding: 24px;
-  background: var(--color-white);
-  color: var(--color-black);
+  background: var(--color-surface);
+  color: var(--color-text);
   filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.14));
   text-align: left;
 }
@@ -22,7 +22,7 @@
 
 .thumbnail {
   flex: none;
-  background: #e5e5eb center / cover no-repeat;
+  background: var(--color-placeholder) center / cover no-repeat;
 }
 
 .vertical .thumbnail {
@@ -55,7 +55,7 @@
 }
 
 .date {
-  color: #808087;
+  color: var(--color-secondary);
   font-family: 'Inter', sans-serif;
   font-size: 14px;
   line-height: 1.5;

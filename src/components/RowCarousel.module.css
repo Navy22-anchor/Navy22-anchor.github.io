@@ -28,7 +28,7 @@
 }
 
 .slot:focus-visible {
-  outline: 2px solid var(--color-black);
+  outline: 2px solid var(--color-text);
   outline-offset: 4px;
 }
 

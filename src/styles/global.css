@@ -14,10 +14,25 @@
 }
 
 :root {
+  /* 고정색 (다크 모드에서도 그대로): 다이내믹 아일랜드, 초록 버튼 글자 등 */
   --color-black: #000000;
   --color-white: #ffffff;
+
+  /* 화면 색. 다크 모드는 Figma "(Dark)" 프레임 기준 */
+  color-scheme: light dark;
+  --color-bg: #ffffff;
+  --color-text: #000000;
+  --color-surface: #ffffff; /* 카드·창 */
+  --color-fill: #f2f2f5; /* 연회색 면: 툴바, 알약 */
+  --color-fill-strong: #f5f5f7; /* 참고문헌 카드 머리 */
+  --color-placeholder: #e5e5eb; /* 회색 자리, 사진 자리 */
+  --color-hover: #d6d6de;
+  --color-secondary: #808087;
   --color-muted: #bdbdc2;
   --color-footnote: #999999;
+  --color-accent: #00241b;
+  --color-error: #d70015;
+  --color-icon-filter: none; /* 검은 SVG 아이콘(중괄호, 뒤로가기) */
 
   --font-sans: 'Inter', 'S-Core Dream', system-ui, sans-serif;
   --font-system: -apple-system, 'SF Pro Text', 'Inter', system-ui, sans-serif;
@@ -51,8 +66,8 @@ html[data-page='home'] body {
 
 body {
   margin: 0;
-  background: var(--color-white);
-  color: var(--color-black);
+  background: var(--color-bg);
+  color: var(--color-text);
   font-family: var(--font-sans);
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
@@ -69,6 +84,24 @@ button {
   border: 0;
   padding: 0;
   cursor: pointer;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #000000;
+    --color-text: #f5f5f7;
+    --color-surface: #1c1c1e;
+    --color-fill: #2c2c2e;
+    --color-fill-strong: #2c2c2e;
+    --color-placeholder: #3a3a3c;
+    --color-hover: #48484a;
+    --color-secondary: #98989f;
+    --color-muted: #636366;
+    --color-footnote: #8e8e93;
+    --color-accent: #1f6b53;
+    --color-error: #ff6961;
+    --color-icon-filter: invert(1);
+  }
 }
 
 /* 모바일: 상·하단 띠 사이의 가운데 */

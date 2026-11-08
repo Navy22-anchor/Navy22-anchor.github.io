@@ -74,6 +74,11 @@
   object-fit: cover;
 }
 
+.artworkEmpty {
+  display: block;
+  background: rgb(255 255 255 / 0.15);
+}
+
 .title {
   flex: 1;
   display: flex;
