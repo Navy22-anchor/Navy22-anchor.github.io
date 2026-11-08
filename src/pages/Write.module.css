@@ -455,3 +455,67 @@
 .categoryOption[aria-selected='true'] {
   font-weight: 600;
 }
+
+/* GitHub 토큰 (발행 창) */
+.tokenField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tokenField label {
+  font-weight: 600;
+}
+
+.tokenField input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  outline: none;
+  background: var(--write-surface);
+  color: inherit;
+  font: inherit;
+}
+
+.dialogNote {
+  color: var(--write-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.tokenField .dialogNote {
+  text-align: left;
+}
+
+.dialogNote a {
+  color: var(--color-black);
+  text-decoration: underline;
+}
+
+.dialogError {
+  width: 100%;
+  color: #d70015;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.linkButton {
+  color: var(--write-muted);
+  font-size: 12px;
+  text-decoration: underline;
+}
+
+.linkButton:hover:not(:disabled) {
+  color: var(--color-black);
+}
+
+.dialogButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

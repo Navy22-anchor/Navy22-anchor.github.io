@@ -4,6 +4,7 @@ import ReferenceCard from '../components/ReferenceCard.jsx';
 import { stringifyPost } from '../data/frontMatter.js';
 import { clearDraft, emptyDraft, formatDate, loadDraft, postId, publishPost, saveDraft } from '../data/localPosts.js';
 import { loadCategories } from '../data/categories.js';
+import { TOKEN_HELP_URL, clearToken, commitPost, loadToken, saveToken } from '../data/github.js';
 import backIcon from '../assets/back.svg';
 import checkIcon from '../assets/check.svg';
 import styles from './Write.module.css';
@@ -185,29 +186,87 @@ function CategorySelect({ value, onChange }) {
 }
 
 // 발행 확인 창: 발행하면 .md 파일을 내려받고(content/posts/ 에 올리면 사이트에 게시) 글 화면으로 이동
-function PublishDialog({ post, onCategory, onClose, onPublish }) {
+function PublishDialog({ post, onCategory, onClose, onPublish, onDownload, token, onToken, busy, error }) {
   const ref = useRef(null);
+  const [savedToken] = useState(token); // 창을 열 때 이미 연결되어 있었는지
   // 창은 사라질 때 DOM에서 빠지며 닫힘 (정리 함수에서 close()하면 onClose가 불려 바로 닫혀 버림)
   useEffect(() => {
     if (!ref.current.open) ref.current.showModal();
   }, []);
 
+  const connected = savedToken && savedToken === token;
+
   return (
-    <dialog ref={ref} className={styles.dialog} onClose={onClose} aria-labelledby="publish-heading">
+    <dialog
+      ref={ref}
+      className={styles.dialog}
+      onClose={onClose}
+      onCancel={(e) => busy && e.preventDefault()}
+      aria-labelledby="publish-heading"
+      aria-busy={busy}
+    >
       <div className={styles.dialogHeader}>
         <CategorySelect value={post.category} onChange={onCategory} />
         <h2 id="publish-heading" className={styles.dialogHeading}>
           에 발행하시겠습니까?
         </h2>
       </div>
+
+      {/* 저장소 쓰기 권한이 있는 GitHub 토큰으로 바로 커밋 */}
+      {connected ? (
+        <p className={styles.dialogNote}>
+          GitHub에 바로 게시됩니다 ·{' '}
+          <button type="button" className={styles.linkButton} onClick={() => onToken('')} disabled={busy}>
+            토큰 바꾸기
+          </button>
+        </p>
+      ) : (
+        <div className={styles.tokenField}>
+          <label htmlFor="github-token">GitHub 토큰</label>
+          <input
+            id="github-token"
+            type="password"
+            autoComplete="off"
+            spellCheck="false"
+            value={token}
+            onChange={(e) => onToken(e.target.value.trim())}
+            onKeyDown={(e) => e.key === 'Enter' && token && onPublish()}
+            disabled={busy}
+          />
+          <p className={styles.dialogNote}>
+            이 저장소의 Contents 읽기·쓰기 권한이 있는 토큰. 이 브라우저에만 저장됩니다.{' '}
+            <a href={TOKEN_HELP_URL} target="_blank" rel="noreferrer">
+              토큰 만들기
+            </a>
+          </p>
+        </div>
+      )}
+
+      {error && (
+        <p className={styles.dialogError} role="alert">
+          {error}
+        </p>
+      )}
+
       <div className={styles.dialogActions}>
-        <button type="button" className={`${styles.dialogButton} ${styles.primary}`} onClick={onPublish}>
-          발행
+        <button
+          type="button"
+          className={`${styles.dialogButton} ${styles.primary}`}
+          onClick={onPublish}
+          disabled={busy || !token}
+        >
+          {busy ? '발행 중…' : '발행'}
         </button>
-        <button type="button" className={styles.dialogButton} onClick={() => ref.current.close()}>
+        <button type="button" className={styles.dialogButton} onClick={() => ref.current.close()} disabled={busy}>
           취소
         </button>
       </div>
+
+      {!connected && (
+        <button type="button" className={styles.linkButton} onClick={onDownload} disabled={busy}>
+          토큰 없이 .md 파일로 내려받기
+        </button>
+      )}
     </dialog>
   );
 }
@@ -216,6 +275,9 @@ export default function Write() {
   const [draft, setDraft] = useState(loadDraft);
   const [status, setStatus] = useState('');
   const [pending, setPending] = useState(null); // 발행 창에 띄운 글
+  const [token, setToken] = useState(loadToken);
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState('');
   const pendingSelection = useRef(null);
   const statusTimer = useRef(0);
 
@@ -263,12 +325,33 @@ export default function Write() {
     setPending({ ...draft, references, id: postId(date), date: formatDate(date), category: loadCategories()[0] });
   };
 
-  const confirmPublish = () => {
-    download(`${pending.id}.md`, stringifyPost(pending));
-    // 저장소에 올리기 전에도 이 브라우저에서는 바로 볼 수 있게 남겨 둠
-    publishPost(pending);
+  // 이 브라우저에서는 바로 보이게 남겨 두고 글 페이지로
+  const finishPublish = (post) => {
+    publishPost(post);
     clearDraft();
-    window.location.hash = `#/post/${pending.id}`;
+    window.location.hash = `#/post/${post.id}`;
+  };
+
+  // 발행: GitHub 저장소에 content/posts/<id>.md 로 커밋
+  const confirmPublish = async () => {
+    if (!token || publishing) return;
+    setPublishing(true);
+    setPublishError('');
+    try {
+      await commitPost(token, pending, stringifyPost(pending));
+      saveToken(token);
+      finishPublish(pending);
+    } catch (err) {
+      if (err.badToken) clearToken();
+      setPublishError(err.message);
+      setPublishing(false);
+    }
+  };
+
+  // 토큰 없이: 예전처럼 파일만 내려받음 (저장소에는 직접 올려야 함)
+  const downloadPublish = () => {
+    download(`${pending.id}.md`, stringifyPost(pending));
+    finishPublish(pending);
   };
 
   // Ctrl+S 임시저장
@@ -328,7 +411,18 @@ export default function Write() {
           post={pending}
           onCategory={(category) => setPending((p) => ({ ...p, category }))}
           onPublish={confirmPublish}
-          onClose={() => setPending(null)}
+          onDownload={downloadPublish}
+          token={token}
+          onToken={(value) => {
+            setToken(value);
+            setPublishError('');
+          }}
+          busy={publishing}
+          error={publishError}
+          onClose={() => {
+            setPending(null);
+            setPublishError('');
+          }}
         />
       )}
 
