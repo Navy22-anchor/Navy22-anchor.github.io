@@ -5,6 +5,7 @@ import { stringifyPost } from '../data/frontMatter.js';
 import { clearDraft, emptyDraft, formatDate, loadDraft, postId, publishPost, saveDraft } from '../data/localPosts.js';
 import { categories } from '../data/projects.js';
 import backIcon from '../assets/back.svg';
+import checkIcon from '../assets/check.svg';
 import styles from './Write.module.css';
 
 // Figma "Blog Post Editor" (21:38): 왼쪽 마크다운 원본, 오른쪽 읽기 미리보기
@@ -83,65 +84,128 @@ function download(filename, text) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// 발행 창: .md 파일을 내려받아 content/posts/ 에 커밋하면 사이트에 게시됨
-function PublishDialog({ post, onCategory, onClose, onDownload, downloaded }) {
+// 카테고리 고르기 (Figma "Publish confirm dialog"): 화살표 없는 알약 버튼을 누르면 목록이 펼쳐짐
+function CategorySelect({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(() => categories.indexOf(value));
+  const rootRef = useRef(null);
+  const listRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    listRef.current?.focus();
+    const onPointer = (e) => {
+      if (!rootRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointer);
+    return () => document.removeEventListener('pointerdown', onPointer);
+  }, [open]);
+
+  const toggle = () => {
+    setActive(categories.indexOf(value));
+    setOpen((o) => !o);
+  };
+
+  const choose = (c) => {
+    onChange(c);
+    setOpen(false);
+    rootRef.current.querySelector('button').focus();
+  };
+
+  const onListKey = (e) => {
+    const last = categories.length - 1;
+    const keys = {
+      ArrowDown: () => setActive((i) => Math.min(last, i + 1)),
+      ArrowUp: () => setActive((i) => Math.max(0, i - 1)),
+      Home: () => setActive(0),
+      End: () => setActive(last),
+      Enter: () => choose(categories[active]),
+      ' ': () => choose(categories[active]),
+      // 목록만 닫고 발행 창은 그대로
+      Escape: () => {
+        setOpen(false);
+        rootRef.current.querySelector('button').focus();
+      },
+      Tab: () => setOpen(false),
+    };
+    if (!keys[e.key]) return;
+    if (e.key !== 'Tab') e.preventDefault();
+    e.stopPropagation();
+    keys[e.key]();
+  };
+
+  return (
+    <div ref={rootRef} className={styles.category}>
+      <button
+        type="button"
+        className={styles.categoryButton}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`카테고리: ${value}`}
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (!open) toggle();
+          }
+        }}
+      >
+        {value}
+      </button>
+      {open && (
+        <ul
+          ref={listRef}
+          className={styles.categoryMenu}
+          role="listbox"
+          tabIndex={-1}
+          aria-label="카테고리"
+          aria-activedescendant={`category-${active}`}
+          onKeyDown={onListKey}
+        >
+          {categories.map((c, i) => (
+            <li
+              key={c}
+              id={`category-${i}`}
+              role="option"
+              aria-selected={c === value}
+              data-active={i === active || undefined}
+              className={styles.categoryOption}
+              onPointerEnter={() => setActive(i)}
+              onClick={() => choose(c)}
+            >
+              {c}
+              {c === value && <img src={checkIcon} alt="" width="11" height="8" />}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// 발행 확인 창: 발행하면 .md 파일을 내려받고(content/posts/ 에 올리면 사이트에 게시) 글 화면으로 이동
+function PublishDialog({ post, onCategory, onClose, onPublish }) {
   const ref = useRef(null);
   // 창은 사라질 때 DOM에서 빠지며 닫힘 (정리 함수에서 close()하면 onClose가 불려 바로 닫혀 버림)
   useEffect(() => {
     if (!ref.current.open) ref.current.showModal();
   }, []);
 
-  const path = `content/posts/${post.id}.md`;
-
   return (
     <dialog ref={ref} className={styles.dialog} onClose={onClose} aria-labelledby="publish-heading">
-      <h2 id="publish-heading" className={styles.dialogHeading}>발행하기</h2>
-      <p className={styles.dialogText}>
-        이 블로그는 서버가 없는 정적 사이트라서, 글 파일을 저장소에 올려야 모두에게 보입니다.
-      </p>
-
-      <label className={styles.dialogField}>
-        분류
-        <select value={post.category} onChange={(e) => onCategory(e.target.value)} disabled={downloaded}>
-          {categories.map((c) => (
-            <option key={c}>{c}</option>
-          ))}
-        </select>
-      </label>
-
-      <ol className={styles.dialogSteps}>
-        <li>
-          아래 버튼으로 <code>{post.id}.md</code> 파일을 내려받습니다.
-        </li>
-        <li>
-          파일을 저장소의 <code>content/posts/</code> 폴더에 넣습니다.
-        </li>
-        <li>
-          커밋하고 <code>main</code>에 push하면 몇 분 뒤 <code>#/post/{post.id}</code> 주소로 게시됩니다.
-        </li>
-      </ol>
-      <p className={styles.dialogNote}>
-        GitHub 웹사이트에서 올릴 때는 저장소의 <code>content/posts</code> 폴더 → Add file → Upload files 를 쓰면 됩니다.
-      </p>
-
+      <div className={styles.dialogHeader}>
+        <CategorySelect value={post.category} onChange={onCategory} />
+        <h2 id="publish-heading" className={styles.dialogHeading}>
+          에 발행하시겠습니까?
+        </h2>
+      </div>
       <div className={styles.dialogActions}>
-        {downloaded ? (
-          <>
-            <span className={styles.status} role="status">내려받음 · {path}</span>
-            <a href={`#/post/${post.id}`} className={`${styles.pill} ${styles.primary}`}>
-              이 브라우저에서 글 보기
-            </a>
-          </>
-        ) : (
-          <>
-            <button type="button" className={styles.pill} onClick={() => ref.current.close()}>
-              취소
-            </button>
-            <button type="button" className={`${styles.pill} ${styles.primary}`} onClick={onDownload}>
-              .md 파일 내려받기
-            </button>
-          </>
-        )}
+        <button type="button" className={`${styles.dialogButton} ${styles.primary}`} onClick={onPublish}>
+          발행
+        </button>
+        <button type="button" className={styles.dialogButton} onClick={() => ref.current.close()}>
+          취소
+        </button>
       </div>
     </dialog>
   );
@@ -151,7 +215,6 @@ export default function Write() {
   const [draft, setDraft] = useState(loadDraft);
   const [status, setStatus] = useState('');
   const [pending, setPending] = useState(null); // 발행 창에 띄운 글
-  const [downloaded, setDownloaded] = useState(false);
   const pendingSelection = useRef(null);
   const statusTimer = useRef(0);
 
@@ -196,16 +259,15 @@ export default function Write() {
     }
     const date = new Date();
     const references = draft.references.filter((ref) => ref.title.trim());
-    setDownloaded(false);
     setPending({ ...draft, references, id: postId(date), date: formatDate(date), category: categories[0] });
   };
 
-  const downloadPost = () => {
+  const confirmPublish = () => {
     download(`${pending.id}.md`, stringifyPost(pending));
     // 저장소에 올리기 전에도 이 브라우저에서는 바로 볼 수 있게 남겨 둠
     publishPost(pending);
     clearDraft();
-    setDownloaded(true);
+    window.location.hash = `#/post/${pending.id}`;
   };
 
   // Ctrl+S 임시저장
@@ -263,14 +325,9 @@ export default function Write() {
       {pending && (
         <PublishDialog
           post={pending}
-          downloaded={downloaded}
           onCategory={(category) => setPending((p) => ({ ...p, category }))}
-          onDownload={downloadPost}
-          onClose={() => {
-            setPending(null);
-            // 내려받은 뒤 창을 닫으면 새 글을 쓸 수 있게 비움
-            if (downloaded) setDraft(emptyDraft);
-          }}
+          onPublish={confirmPublish}
+          onClose={() => setPending(null)}
         />
       )}
 

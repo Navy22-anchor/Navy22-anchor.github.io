@@ -363,81 +363,119 @@
   }
 }
 
-/* ── 발행 창 ── */
+/* ── 발행 확인 창 (Figma "Publish confirm dialog") ── */
 .dialog {
-  width: min(480px, calc(100vw - 32px));
-  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: min(400px, calc(100vw - 32px));
+  padding: 32px 28px 28px;
   border: 0;
   border-radius: 16px;
+  overflow: visible; /* 카테고리 목록이 창 밖으로 펼쳐질 수 있게 */
   color: var(--color-black);
   font-family: 'Inter', 'Noto Sans KR', sans-serif;
-  box-shadow: 0 20px 60px rgb(0 0 0 / 0.18);
+  box-shadow:
+    0 4px 8px rgb(0 0 0 / 0.08),
+    0 16px 40px rgb(0 0 0 / 0.16);
+}
+
+.dialog:not([open]) {
+  display: none;
 }
 
 .dialog::backdrop {
   background: rgb(0 0 0 / 0.3);
 }
 
-.dialog code {
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: var(--write-surface);
-  font-size: 0.9em;
-  word-break: break-all;
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  gap: 18px;
 }
 
 .dialogHeading {
-  margin: 0 0 8px;
   font-size: 20px;
   font-weight: 700;
-}
-
-.dialogText,
-.dialogNote {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.dialogNote {
-  color: var(--write-muted);
-  font-size: 13px;
-}
-
-.dialogField {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 16px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.dialogField select {
-  padding: 6px 10px;
-  border: 1px solid var(--write-placeholder);
-  border-radius: 8px;
-  font: inherit;
-  font-weight: 400;
-}
-
-.dialogSteps {
-  margin: 16px 0 12px;
-  padding-left: 20px;
-  font-size: 14px;
-  line-height: 1.7;
+  line-height: 1.5;
+  white-space: nowrap;
 }
 
 .dialogActions {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  align-items: center;
   gap: 8px;
-  margin-top: 24px;
 }
 
-.dialogActions .status {
-  margin-right: auto;
-  word-break: break-all;
+.dialogButton {
+  padding: 8px 20px;
+  border-radius: 999px;
+  background: var(--write-surface);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* 카테고리: 화살표 없는 알약, 누르면 아래로 목록 */
+.category {
+  position: relative;
+}
+
+.categoryButton {
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--write-surface);
+  box-shadow: inset 0 0 0 1px transparent;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  transition: box-shadow 0.15s;
+}
+
+.categoryButton:hover,
+.categoryButton[aria-expanded='true'] {
+  box-shadow: inset 0 0 0 1px var(--color-black);
+}
+
+.categoryMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 150px;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid var(--write-placeholder);
+  border-radius: 10px;
+  background: var(--color-white);
+  box-shadow:
+    0 4px 8px rgb(0 0 0 / 0.06),
+    0 16px 40px rgb(0 0 0 / 0.14);
+  list-style: none;
+  outline: none;
+}
+
+.categoryOption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.categoryOption[data-active] {
+  background: var(--write-surface);
+}
+
+.categoryOption[aria-selected='true'] {
+  font-weight: 600;
 }
