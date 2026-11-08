@@ -91,6 +91,7 @@ export default function ProjectStrip({ rows, initialRow = 0, indexFor, onActiveC
       moveBy(WHEEL_DIRECTION * e.deltaY * unit);
     };
     const onKey = (e) => {
+      if (e.target.closest?.('input, textarea, [role="dialog"]')) return; // 글자 입력·달력 사용 중에는 넘기지 않음
       // ↓는 휠을 내릴 때와 같은 방향
       if (e.key === 'ArrowDown') animateTo(Math.round(posRef.current) + WHEEL_DIRECTION);
       else if (e.key === 'ArrowUp') animateTo(Math.round(posRef.current) - WHEEL_DIRECTION);

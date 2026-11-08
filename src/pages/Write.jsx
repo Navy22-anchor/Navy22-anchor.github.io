@@ -3,7 +3,7 @@ import Markdown from '../components/Markdown.jsx';
 import ReferenceCard from '../components/ReferenceCard.jsx';
 import { stringifyPost } from '../data/frontMatter.js';
 import { clearDraft, emptyDraft, formatDate, loadDraft, postId, publishPost, saveDraft } from '../data/localPosts.js';
-import { categories } from '../data/projects.js';
+import { loadCategories } from '../data/categories.js';
 import backIcon from '../assets/back.svg';
 import checkIcon from '../assets/check.svg';
 import styles from './Write.module.css';
@@ -86,6 +86,7 @@ function download(filename, text) {
 
 // 카테고리 고르기 (Figma "Publish confirm dialog"): 화살표 없는 알약 버튼을 누르면 목록이 펼쳐짐
 function CategorySelect({ value, onChange }) {
+  const [categories] = useState(loadCategories);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(() => categories.indexOf(value));
   const rootRef = useRef(null);
@@ -259,7 +260,7 @@ export default function Write() {
     }
     const date = new Date();
     const references = draft.references.filter((ref) => ref.title.trim());
-    setPending({ ...draft, references, id: postId(date), date: formatDate(date), category: categories[0] });
+    setPending({ ...draft, references, id: postId(date), date: formatDate(date), category: loadCategories()[0] });
   };
 
   const confirmPublish = () => {

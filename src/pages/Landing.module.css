@@ -17,7 +17,8 @@
 
 .header a,
 .header button,
-.categories button {
+.categories button,
+.categories input {
   pointer-events: auto;
 }
 
@@ -43,24 +44,6 @@
 .logoBy { font-size: 24px; }
 
 /* ── 상단 우측 ── */
-.nav {
-  position: absolute;
-  top: 20px;
-  left: 74.43%; /* 1429 / 1920 */
-  line-height: normal;
-  white-space: nowrap;
-}
-
-.navSep {
-  margin-left: 11px;
-}
-
-.underline {
-  text-decoration: underline;
-  text-decoration-thickness: from-font;
-  text-underline-position: from-font;
-}
-
 .plainLink {
   text-decoration: none;
 }
@@ -69,10 +52,20 @@
   text-decoration: underline;
 }
 
+/* 다이내믹 아일랜드: 원래(190×38)의 70%, 오른쪽 끝 x 1814 (Figma 133×27, x 1681) */
 .island {
   position: absolute;
-  top: 12px;
-  left: 84.69%; /* 1626 / 1920 */
+  top: 19px;
+  right: 5.52%; /* (1920 - 1814) / 1920 */
+  transform: scale(0.7);
+  transform-origin: top right;
+}
+
+/* 날짜·시간: 아일랜드 왼쪽 25px (Figma x 1512~1656) */
+.dateTime {
+  position: absolute;
+  top: 20px;
+  right: calc(5.52% + 133px + 25px);
 }
 
 .writeNav {
@@ -82,14 +75,43 @@
   line-height: normal;
 }
 
-.intro {
-  position: absolute;
-  top: 101px;
-  left: 74.53%; /* 1431 / 1920 */
-  width: 290px;
-  margin: 0;
-  line-height: 16px;
-  word-break: keep-all;
+/* 아일랜드가 가운데에서 펼쳐지면 양옆이 물러남 (Figma "Island hover motion" 92:652).
+   한쪽으로 늘어나는 폭 = (367 - 190) / 2 × 0.7 ≈ 62px */
+.header {
+  --island-push: 62px;
+  --island-spring: linear(0, 0.046, 0.157, 0.299, 0.449, 0.591, 0.716, 0.819, 0.899, 0.959, 1, 1.026, 1.04, 1.046, 1.045, 1.041, 1.035, 1.028, 1.021, 1.015, 1.01, 1.006, 1.003, 1.001, 0.999, 0.998, 0.998, 0.998, 0.998, 0.998, 1);
+}
+
+.dateTime {
+  transition: transform 0.45s var(--island-spring);
+}
+
+/* 글쓰기는 화면 끝 밖으로 밀리므로 흐려지며 사라졌다가, 아일랜드가 다 줄어들 즈음 돌아옴 */
+.writeNav {
+  transition:
+    transform 0.45s var(--island-spring),
+    opacity 0.35s ease-out 0.2s;
+}
+
+.header:has(.island :is(:hover, :focus-within)) .dateTime {
+  transform: translateX(calc(-1 * var(--island-push)));
+  transition: transform 0.55s var(--island-spring);
+}
+
+.header:has(.island :is(:hover, :focus-within)) .writeNav {
+  transform: translateX(var(--island-push));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.55s var(--island-spring),
+    opacity 0.25s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dateTime,
+  .writeNav {
+    transition: none !important;
+  }
 }
 
 /* ── 카테고리 ── */
@@ -117,6 +139,23 @@
 .category:hover,
 .categoryActive {
   color: var(--color-black);
+}
+
+/* "+" 대신 나타나는 이름 입력칸: 목록 글자와 같은 크기 */
+.categoryInput {
+  display: block;
+  width: 110px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--color-black);
+  font: inherit;
+  line-height: inherit;
+}
+
+.categoryInput::placeholder {
+  color: var(--color-muted);
 }
 
 /* ── 브라켓 기준선 ── */
@@ -177,14 +216,9 @@
 
 /* ── 좁은 화면 ── */
 @media (max-width: 1100px) {
-  .intro,
-  .island {
+  .island,
+  .dateTime {
     display: none;
-  }
-
-  .nav {
-    left: auto;
-    right: 90px;
   }
 
   .roles {
@@ -201,12 +235,6 @@
   .header {
     height: 84px;
     background: var(--color-white);
-  }
-
-  .nav {
-    top: 54px;
-    right: auto;
-    left: 20px;
   }
 
   .braceLeft,

@@ -1,13 +1,69 @@
+/* 스프링 (Figma bounce 0.22 근사, 살짝 넘쳤다 돌아옴) */
+.root {
+  --island-spring: linear(0, 0.046, 0.157, 0.299, 0.449, 0.591, 0.716, 0.819, 0.899, 0.959, 1, 1.026, 1.04, 1.046, 1.045, 1.041, 1.035, 1.028, 1.021, 1.015, 1.01, 1.006, 1.003, 1.001, 0.999, 0.998, 0.998, 0.998, 0.998, 0.998, 1);
+
+  position: relative;
+  width: 190px;
+  height: 38px;
+}
+
+/* 검은 껍데기 하나가 가운데를 기준으로 190×38 → 367×177 로 커짐 */
+.shell {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 1;
+  width: 190px;
+  height: 38px;
+  border-radius: 22px;
+  overflow: hidden;
+  background: var(--color-black);
+  color: var(--color-white);
+  font-family: var(--font-system);
+  transform: translateX(-50%);
+  pointer-events: auto;
+  /* 축소: 0.45s */
+  transition:
+    width 0.45s var(--island-spring),
+    height 0.45s var(--island-spring),
+    border-radius 0.45s var(--island-spring),
+    box-shadow 0.45s;
+}
+
+.root:is(:hover, :focus-within) .shell {
+  width: 367px;
+  height: 177px;
+  border-radius: 42px;
+  box-shadow: 0 8px 16px rgb(0 0 0 / 0.25);
+  /* 확장: 0.55s */
+  transition:
+    width 0.55s var(--island-spring),
+    height 0.55s var(--island-spring),
+    border-radius 0.55s var(--island-spring),
+    box-shadow 0.55s;
+}
+
+/* 작은 아일랜드 내용: 껍데기 가운데에 고정 */
 .island {
+  position: absolute;
+  top: 0;
+  left: 50%;
   display: flex;
   align-items: center;
   gap: 3px;
   width: 190px;
   height: 38px;
   padding: 0 12px;
-  border-radius: 22px;
-  background: var(--color-black);
-  color: var(--color-white);
+  color: inherit;
+  transform: translateX(-50%);
+  /* 축소가 거의 끝날 때 다시 나타남 */
+  transition: opacity 0.2s ease-out 0.3s;
+}
+
+.root:is(:hover, :focus-within) .island {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease-out;
 }
 
 .artwork {
@@ -90,4 +146,156 @@
 
 @media (prefers-reduced-motion: reduce) {
   .playing i { animation: none; }
+}
+
+/* ── 펼친 재생기 내용 (Figma 44:788) ── */
+.expanded {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  width: 367px;
+  padding: 32px 8px 12px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) scale(0.96);
+  transform-origin: top center;
+  /* 축소: 먼저 빠르게 사라짐 */
+  transition:
+    opacity 0.1s ease-out,
+    transform 0.1s ease-out,
+    visibility 0s 0.1s;
+}
+
+.root:is(:hover, :focus-within) .expanded {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%);
+  /* 확장: 껍데기가 커지기 시작하고 0.1s 뒤에 나타남 */
+  transition:
+    opacity 0.25s ease-out 0.1s,
+    transform 0.45s var(--island-spring) 0.1s,
+    visibility 0s 0.1s;
+}
+
+.expanded button {
+  display: grid;
+  place-items: center;
+  color: inherit;
+}
+
+.metadata {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 0 16px;
+}
+
+.bigArtwork {
+  flex: none;
+  width: 53px;
+  height: 53px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 21px;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+.headline {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.headline .title {
+  max-width: none;
+}
+
+.artist {
+  color: #9a9a9a;
+  font-size: 14px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 0 16px;
+}
+
+.time {
+  color: #9a9a9a;
+  font-size: 12px;
+  line-height: 18px;
+  letter-spacing: -0.408px;
+  font-variant-numeric: tabular-nums;
+}
+
+.track {
+  position: relative;
+  flex: 1;
+  height: 6.5px;
+  margin: 4px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgb(63 63 63 / 0.7);
+}
+
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgb(255 255 255 / 0.8);
+  transition: width 1s linear;
+}
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 44px; /* Figma 전체 높이 177에 맞춤 */
+  padding: 0 32px;
+}
+
+.spacer {
+  width: 20px;
+}
+
+.playControls {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+}
+
+.controls button {
+  min-width: 20px;
+  min-height: 20px;
+  border-radius: 8px;
+  transition: opacity 0.15s;
+}
+
+.controls button:hover {
+  opacity: 0.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root :is(.shell, .island, .expanded) {
+    transition: none !important;
+  }
 }

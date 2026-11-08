@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import DateTime from '../components/DateTime.jsx';
 import DynamicIsland from '../components/DynamicIsland.jsx';
 import ProjectStrip from '../components/ProjectStrip.jsx';
-import { categories, initialRow, rows } from '../data/projects.js';
+import { addCategory, loadCategories } from '../data/categories.js';
+import { initialRow, rows } from '../data/projects.js';
 import braceLeft from '../assets/brace-left.svg';
 import braceRight from '../assets/brace-right.svg';
 import styles from './Landing.module.css';
@@ -14,7 +16,9 @@ const WHEEL_LOCK_MS = 280;
 const startIndex = (row) => Math.floor((row.items.length - 1) / 2) * (row.kind === 'posts' ? 0 : 1);
 
 export default function Landing() {
+  const [categories, setCategories] = useState(loadCategories);
   const [category, setCategory] = useState(categories[0]);
+  const [adding, setAdding] = useState(false); // "+"를 눌러 새 카테고리 이름을 입력하는 중
   const [activeRow, setActiveRow] = useState(initialRow);
   // 줄마다 지금 가운데에 있는 콘텐츠 번호를 기억
   const [indexes, setIndexes] = useState({});
@@ -51,6 +55,7 @@ export default function Landing() {
       }
     };
     const onKey = (e) => {
+      if (e.target.closest?.('input, textarea, [role="dialog"]')) return; // 글자 입력·달력 사용 중에는 넘기지 않음
       if (e.key === 'ArrowRight') changeItem(active, itemIndex + 1);
       else if (e.key === 'ArrowLeft') changeItem(active, itemIndex - 1);
       else return;
@@ -73,22 +78,13 @@ export default function Landing() {
           <span className={styles.logoBy}>by</span>
         </h1>
 
-        <nav className={styles.nav} aria-label="주요 메뉴">
-          <a href="#/" className={styles.underline}>Work</a>
-          <span className={styles.navSep}>
-            , <a href="#/post" className={styles.plainLink}>About</a>
-          </span>
-        </nav>
+        <DateTime className={styles.dateTime} />
 
         <div className={styles.island}>
           <DynamicIsland />
         </div>
 
         <a href="#/write" className={`${styles.plainLink} ${styles.writeNav}`}>글쓰기</a>
-
-        <p className={styles.intro}>
-          여기에 스튜디오 소개 문단이 들어갑니다. 프로젝트와 작업 방식을 짧게 적는 자리입니다.
-        </p>
       </header>
 
       <ul className={styles.categories} aria-label="카테고리">
@@ -104,6 +100,32 @@ export default function Landing() {
             </button>
           </li>
         ))}
+        <li>
+          {adding ? (
+            <input
+              className={styles.categoryInput}
+              autoFocus
+              maxLength={20}
+              placeholder="새 카테고리"
+              aria-label="새 카테고리 이름 (Enter로 추가, Esc로 취소)"
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setAdding(false);
+                if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+                const name = addCategory(e.currentTarget.value);
+                if (name) {
+                  setCategories(loadCategories());
+                  setCategory(name);
+                }
+                setAdding(false);
+              }}
+              onBlur={() => setAdding(false)}
+            />
+          ) : (
+            <button type="button" className={styles.category} aria-label="카테고리 추가" onClick={() => setAdding(true)}>
+              +
+            </button>
+          )}
+        </li>
       </ul>
 
       <div className={styles.focus}>
