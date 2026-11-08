@@ -4,7 +4,7 @@
   --write-muted: #808087;
   --write-placeholder: #e5e5eb;
   --write-surface: #f2f2f5;
-  --write-accent: #592ed1;
+  --write-accent: #00241b;
 
   min-height: 100vh;
   color: var(--color-black);
@@ -27,12 +27,20 @@
   background: var(--color-white);
 }
 
-.icon {
+.back {
   display: block;
+  justify-self: start;
   width: 24px;
   height: 24px;
   border-radius: 6px;
-  background: var(--write-placeholder);
+}
+
+.back img {
+  display: block;
+}
+
+.back:hover {
+  background: var(--write-surface);
 }
 
 .pill {
@@ -74,7 +82,7 @@
   grid-template-columns: repeat(2, minmax(0, 600px));
   justify-content: center;
   align-items: start;
-  gap: 40px;
+  gap: clamp(40px, 8.34vw, 120px); /* 1440 기준 120 */
   padding: 32px 20px;
 }
 
@@ -265,7 +273,7 @@
   gap: 24px;
   min-width: 0;
   max-height: calc(100vh - 77px);
-  padding: 40px;
+  padding: 22px 40px 40px; /* 미리보기 제목을 왼쪽 글 제목과 같은 높이에 */
   border-radius: 16px;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -290,8 +298,7 @@
   color: var(--write-placeholder);
 }
 
-.previewByline,
-.previewDate {
+.previewByline {
   color: var(--write-muted);
   line-height: 1.5;
   text-align: center;
@@ -300,10 +307,6 @@
 .previewByline {
   font-size: 14px;
   font-weight: 500;
-}
-
-.previewDate {
-  font-size: 13px;
 }
 
 .previewBody {

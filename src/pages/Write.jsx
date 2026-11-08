@@ -4,6 +4,7 @@ import ReferenceCard from '../components/ReferenceCard.jsx';
 import { stringifyPost } from '../data/frontMatter.js';
 import { clearDraft, emptyDraft, formatDate, loadDraft, postId, publishPost, saveDraft } from '../data/localPosts.js';
 import { categories } from '../data/projects.js';
+import backIcon from '../assets/back.svg';
 import styles from './Write.module.css';
 
 // Figma "Blog Post Editor" (21:38): 왼쪽 마크다운 원본, 오른쪽 읽기 미리보기
@@ -149,7 +150,6 @@ function PublishDialog({ post, onCategory, onClose, onDownload, downloaded }) {
 export default function Write() {
   const [draft, setDraft] = useState(loadDraft);
   const [status, setStatus] = useState('');
-  const [now, setNow] = useState(() => formatDate());
   const [pending, setPending] = useState(null); // 발행 창에 띄운 글
   const [downloaded, setDownloaded] = useState(false);
   const pendingSelection = useRef(null);
@@ -168,12 +168,6 @@ export default function Write() {
     sourceRef.current.focus();
     sourceRef.current.setSelectionRange(sel.start, sel.end);
   }, [draft.markdown, sourceRef]);
-
-  // 미리보기 날짜는 1분마다 갱신
-  useEffect(() => {
-    const id = setInterval(() => setNow(formatDate()), 30000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => () => clearTimeout(statusTimer.current), []);
 
@@ -237,13 +231,21 @@ export default function Write() {
   const setReference = (i, patch) =>
     update({ references: draft.references.map((ref, j) => (j === i ? { ...ref, ...patch } : ref)) });
 
+  // 이전 화면이 있으면 그리로, 이 주소로 바로 열었으면 홈으로
+  const goBack = () => {
+    if (window.history.length > 1) window.history.back();
+    else window.location.hash = '#/';
+  };
+
   const references = draft.references.filter((ref) => ref.title.trim());
   const isEmpty = JSON.stringify(draft) === JSON.stringify(emptyDraft);
 
   return (
     <div className={styles.page}>
       <header className={styles.topBar}>
-        <a href="#/" className={styles.icon} aria-label="홈으로" />
+        <button type="button" className={styles.back} aria-label="뒤로가기" onClick={goBack}>
+          <img src={backIcon} alt="" width="24" height="24" />
+        </button>
         <p className={styles.pill}>글 작성</p>
         <div className={styles.actions}>
           <span className={styles.status} role="status">
@@ -361,7 +363,6 @@ export default function Write() {
             {draft.title || '글 제목'}
           </h1>
           <p className={styles.previewByline}>by {draft.author || '작성자 이름'}</p>
-          <time className={styles.previewDate}>{now}</time>
           <Markdown source={draft.markdown} className={styles.previewBody} />
           {references.length > 0 && (
             <>
