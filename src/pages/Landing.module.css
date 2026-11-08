@@ -3,8 +3,7 @@
 
 .header,
 .categories,
-.focus,
-.footer {
+.focus {
   position: fixed;
   z-index: 1;
   pointer-events: none;
@@ -194,26 +193,6 @@
   z-index: 0; /* 스크롤되는 카드가 고정된 머리말·브라켓 아래로 지나가게 */
 }
 
-/* ── 하단 ── */
-.footer {
-  left: var(--edge);
-  right: 16px;
-  bottom: 13px;
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  line-height: normal;
-}
-
-.footer p {
-  margin: 0;
-}
-
-.copyright {
-  color: var(--color-footnote);
-  text-align: right;
-}
-
 /* ── 좁은 화면 ── */
 @media (max-width: 1100px) {
   .island,
@@ -258,9 +237,4 @@
 
   .tags { left: var(--edge); }
   .index { right: 16px; }
-
-  .footer {
-    font-size: 13px;
-    z-index: 2;
-  }
 }

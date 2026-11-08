@@ -3,7 +3,7 @@ import DateTime from '../components/DateTime.jsx';
 import DynamicIsland from '../components/DynamicIsland.jsx';
 import ProjectStrip from '../components/ProjectStrip.jsx';
 import { addCategory, loadCategories } from '../data/categories.js';
-import { initialRow, rows } from '../data/projects.js';
+import { loadRows } from '../data/projects.js';
 import braceLeft from '../assets/brace-left.svg';
 import braceRight from '../assets/brace-right.svg';
 import styles from './Landing.module.css';
@@ -16,6 +16,7 @@ const WHEEL_LOCK_MS = 280;
 const startIndex = (row) => Math.floor((row.items.length - 1) / 2) * (row.kind === 'posts' ? 0 : 1);
 
 export default function Landing() {
+  const [{ rows, initialRow }] = useState(loadRows);
   const [categories, setCategories] = useState(loadCategories);
   const [category, setCategory] = useState(categories[0]);
   const [adding, setAdding] = useState(false); // "+"를 눌러 새 카테고리 이름을 입력하는 중
@@ -148,11 +149,6 @@ export default function Landing() {
           onOpen={openItem}
         />
       </main>
-
-      <footer className={styles.footer}>
-        <p>Vertical, Horizontal, Grid</p>
-        <p className={styles.copyright}>All rights reserved. ©2026 Placeholder</p>
-      </footer>
     </>
   );
 }

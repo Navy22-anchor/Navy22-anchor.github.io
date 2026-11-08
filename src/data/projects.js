@@ -3,18 +3,31 @@ import bookCenter from '../assets/work-book.jpg';
 import bookRight from '../assets/book-right.jpg';
 import workNight from '../assets/work-night.jpg';
 import workWhisky from '../assets/work-whisky.jpg';
-import { repoPosts } from './repoPosts.js';
+import { loadLocalPosts } from './localPosts.js';
+import { excerptOf, repoPosts } from './repoPosts.js';
 
 // 세로로 쌓이는 줄(작업). 줄마다 가로로 넘기는 콘텐츠(items)가 있고,
 // 중괄호 사이에 들어온 줄만 양옆 콘텐츠가 조금 작게 펼쳐집니다.
 // kind: 'posts' → 가로형 글 카드 / 'images' → 사진·책 표지 (w·h는 Figma 크기)
 
-// AI 줄에는 저장소의 글(content/posts/*.md) 중 category가 AI인 글이 최신순으로 들어갑니다.
-const posts = repoPosts
-  .filter((post) => post.category === 'AI')
-  .map(({ id, title, date, excerpt, thumbnail }) => ({ id, title, date: date.slice(0, 10), excerpt, thumbnail }));
+// AI 줄에는 category가 AI인 글이 최신순으로 들어갑니다.
+// 저장소의 글(content/posts/*.md)에, 이 브라우저에서 발행했지만 아직 저장소에 올리지 않은 글을 더함
+function loadPosts(category) {
+  const repoIds = new Set(repoPosts.map((post) => post.id));
+  const local = loadLocalPosts()
+    .filter((post) => !repoIds.has(post.id))
+    .map((post) => ({
+      ...post,
+      excerpt: excerptOf(post.markdown ?? ''),
+      thumbnail: /!\[[^\]]*\]\(\s*([^)\s]+)/.exec(post.markdown ?? '')?.[1] ?? null,
+    }));
+  return [...repoPosts, ...local]
+    .filter((post) => post.category === category)
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    .map(({ id, title, date, excerpt, thumbnail }) => ({ id, title, date: date.slice(0, 10), excerpt, thumbnail }));
+}
 
-const allRows = [
+const buildRows = () => [
   {
     id: 'cooking',
     category: 'Cooking',
@@ -35,7 +48,7 @@ const allRows = [
     id: 'ai',
     category: 'AI',
     kind: 'posts',
-    items: posts,
+    items: loadPosts('AI'),
   },
   {
     id: 'photo',
@@ -45,10 +58,11 @@ const allRows = [
   },
 ];
 
-// 콘텐츠가 하나도 없는 줄(예: 아직 글이 없는 AI 줄)은 숨김
-export const rows = allRows.filter((row) => row.items.length > 0);
-
-// 처음 중괄호 사이에 놓일 줄
-export const initialRow = Math.max(0, rows.findIndex((row) => row.id === 'ai'));
+// 랜딩을 열 때마다 새로 만듦 (방금 발행한 글이 바로 보이게).
+// 콘텐츠가 하나도 없는 줄(예: 아직 글이 없는 AI 줄)은 숨기고, 처음엔 AI 줄을 중괄호 사이에 둠
+export function loadRows() {
+  const rows = buildRows().filter((row) => row.items.length > 0);
+  return { rows, initialRow: Math.max(0, rows.findIndex((row) => row.id === 'ai')) };
+}
 
 export const categories = ['AI', 'Daily', 'Cooking', 'Photo', 'Library', 'Side Project'];
