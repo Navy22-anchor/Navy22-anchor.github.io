@@ -1,0 +1,131 @@
+/* 마크다운 본문. 글 뷰어(Post)와 같은 서식, 글자 크기만 --md-body-size로 조절 */
+.markdown {
+  --md-muted: #808087;
+  --md-surface: #f2f2f5;
+  --md-placeholder: #e5e5eb;
+
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+  color: var(--color-black);
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: var(--md-body-size, 18px);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.markdown > * {
+  margin: 0;
+}
+
+.markdown :is(h1, h2, h3, h4) {
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.markdown h1 {
+  font-size: 26px;
+}
+
+.markdown h2 {
+  font-size: 20px;
+}
+
+.markdown :is(h3, h4) {
+  font-size: 18px;
+}
+
+.markdown a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown :is(ul, ol) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 1.4em;
+}
+
+.markdown blockquote {
+  padding-left: 16px;
+  border-left: 3px solid var(--md-placeholder);
+}
+
+.markdown blockquote > * {
+  margin: 0;
+}
+
+.markdown code {
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--md-surface);
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.88em;
+}
+
+.markdown pre {
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--md-surface);
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+.markdown pre code {
+  padding: 0;
+  background: none;
+}
+
+.markdown hr {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--md-placeholder);
+}
+
+.markdown table {
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.markdown :is(th, td) {
+  padding: 6px 12px;
+  border: 1px solid var(--md-placeholder);
+}
+
+/* 사진 + 캡션 */
+.markdown figure {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.markdown figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 120px;
+  background: var(--md-placeholder);
+}
+
+.markdown figcaption {
+  color: var(--md-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* $$ 수식 $$ 블록 (Figma "Formula block") */
+.math {
+  padding: 20px 16px;
+  border-radius: 8px;
+  background: var(--md-surface);
+  font-size: 18px;
+  text-align: center;
+  overflow-x: auto;
+}
+
+.math :global(.katex-display) {
+  margin: 0;
+}

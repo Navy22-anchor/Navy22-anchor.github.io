@@ -1,24 +1,14 @@
-.strip {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 7px;
-  margin: 0;
-  /* 작업 수가 적어도 어떤 타일이든 기준선까지 스크롤할 수 있도록 */
-  padding: 100vh 0;
-  list-style: none;
+.viewport {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
 }
 
-.item {
-  display: flex;
-}
-
-.tile {
-  display: block;
-  max-width: calc(100vw - 2 * var(--edge));
-}
-
-.tile:focus-visible {
-  outline: 2px solid var(--color-black);
-  outline-offset: 3px;
+/* 한 줄. 높이는 가운데 콘텐츠 높이, 안의 캐러셀은 가로 가운데·세로 가운데 */
+.row {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 0;
 }

@@ -1,0 +1,83 @@
+.carousel {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 0;
+  height: 0;
+  line-height: normal;
+  white-space: normal;
+}
+
+.slot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  transition:
+    transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1),
+    opacity 0.35s;
+}
+
+.slot:not([data-active]) {
+  opacity: var(--side-opacity, 1);
+}
+
+.slot[data-hidden] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.slot:focus-visible {
+  outline: 2px solid var(--color-black);
+  outline-offset: 4px;
+}
+
+.image {
+  display: block;
+  object-fit: cover;
+}
+
+/* 가운데 글 카드는 그림자를 깊게 → 양옆 카드가 뒤로 물러나 보이게 */
+.slot article {
+  transition: filter 0.35s;
+}
+
+.slot[data-active] article {
+  filter:
+    drop-shadow(0 4px 6px rgba(0, 0, 0, 0.12))
+    drop-shadow(0 16px 32px rgba(0, 0, 0, 0.22));
+}
+
+.slot:not([data-active]) article {
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.1));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slot {
+    transition: none;
+  }
+}
+
+/* 좁은 화면: 가운데 콘텐츠만 */
+@media (max-width: 700px) {
+  .slot:not([data-active]) {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .slot article {
+    width: calc(100vw - 32px);
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .slot article > div:first-child {
+    width: 96px;
+    height: 72px;
+  }
+
+  .image {
+    max-width: calc(100vw - 32px);
+    height: auto;
+  }
+}

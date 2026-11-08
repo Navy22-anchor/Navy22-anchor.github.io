@@ -10,6 +10,11 @@
   pointer-events: none;
 }
 
+/* 브라켓은 양옆 카드 위에 */
+.focus {
+  z-index: 2;
+}
+
 .header a,
 .header button,
 .categories button {
@@ -40,8 +45,8 @@
 /* ── 상단 우측 ── */
 .nav {
   position: absolute;
-  top: 16px;
-  left: 74.53%; /* 1431 / 1920 */
+  top: 20px;
+  left: 74.43%; /* 1429 / 1920 */
   line-height: normal;
   white-space: nowrap;
 }
@@ -67,31 +72,24 @@
 .island {
   position: absolute;
   top: 12px;
-  left: 82.45%; /* 1583 / 1920 */
+  left: 84.69%; /* 1626 / 1920 */
 }
 
-.contactNav {
+.writeNav {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 20px;
+  right: 30px; /* 1890 = 1920 - 30 */
   line-height: normal;
 }
 
 .intro {
   position: absolute;
-  top: 67px;
-  left: 74.53%;
+  top: 101px;
+  left: 74.53%; /* 1431 / 1920 */
   width: 290px;
-  line-height: 16px;
-}
-
-.intro p {
   margin: 0;
+  line-height: 16px;
   word-break: keep-all;
-}
-
-.intro .contact {
-  margin-top: 52px;
 }
 
 /* ── 카테고리 ── */
@@ -139,15 +137,22 @@
 }
 
 .tags { left: 17.24%; }   /* 331 / 1920 */
-.roles { left: 75.16%; }  /* 1443 / 1920 */
+.roles {                 /* 1443 / 1920 */
+  left: 75.16%;
+  max-width: calc(24.84% - 60px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .index { right: 22px; }
 
-.braceLeft { left: calc(50% - 330px); }
-.braceRight { left: calc(50% + 260px); }
+/* --brace-offset: 가운데 콘텐츠 크기에 맞춘 중괄호 거리 (ProjectStrip이 설정) */
+.braceLeft { left: calc(50% - var(--brace-offset, 369px) - 71px); }
+.braceRight { left: calc(50% + var(--brace-offset, 369px)); }
 
 /* ── 작업 스트립 ── */
 .main {
   position: relative;
+  z-index: 0; /* 스크롤되는 카드가 고정된 머리말·브라켓 아래로 지나가게 */
 }
 
 /* ── 하단 ── */
@@ -192,32 +197,42 @@
   .logoSpace { font-size: 40px; }
   .logoBy { font-size: 18px; }
 
+  /* 타일 위로 글자가 겹치지 않게 상·하단에 흰 띠 */
+  .header {
+    height: 84px;
+    background: var(--color-white);
+  }
+
   .nav {
-    top: 52px;
+    top: 54px;
     right: auto;
     left: 20px;
   }
 
-  .contactNav {
-    top: 52px;
-    right: auto;
-    left: 104px;
-  }
-
   .braceLeft,
   .braceRight,
-  .categories {
+  .categories,
+  .roles {
     display: none;
   }
 
   .focus {
     top: auto;
-    bottom: 44px;
+    bottom: 0;
+    height: 76px;
+    background: var(--color-white);
+  }
+
+  .focus > * {
+    top: 8px;
+    transform: none;
   }
 
   .tags { left: var(--edge); }
+  .index { right: 16px; }
 
   .footer {
     font-size: 13px;
+    z-index: 2;
   }
 }

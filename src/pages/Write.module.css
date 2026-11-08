@@ -1,0 +1,361 @@
+/* Figma "Blog Post Editor" (1440). 글자는 검은색, 회색 보조 글자만 #808087 */
+
+.page {
+  --write-muted: #808087;
+  --write-placeholder: #e5e5eb;
+  --write-surface: #f2f2f5;
+  --write-accent: #592ed1;
+
+  min-height: 100vh;
+  color: var(--color-black);
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+}
+
+.page :is(h1, h2, p, fieldset) {
+  margin: 0;
+}
+
+/* ── 상단 바 ── */
+.topBar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 20px 32px;
+  background: var(--color-white);
+}
+
+.icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--write-placeholder);
+}
+
+.pill {
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--write-surface);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  justify-self: end;
+  align-items: center;
+  gap: 8px;
+}
+
+.actions button:disabled {
+  color: var(--write-muted);
+  cursor: default;
+}
+
+.primary {
+  background: var(--write-accent);
+  color: var(--color-white);
+}
+
+.status {
+  margin-right: 8px;
+  color: var(--write-muted);
+  font-size: 13px;
+}
+
+/* ── 왼쪽 원본 / 오른쪽 미리보기 (600 + 40 + 600) ── */
+.split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 600px));
+  justify-content: center;
+  align-items: start;
+  gap: 40px;
+  padding: 32px 20px;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+.toolbar {
+  position: sticky;
+  top: 77px;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--write-surface);
+}
+
+.tool {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--write-placeholder);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tool:hover {
+  background: #d6d6de;
+}
+
+.tool[data-tool='italic'] {
+  font-style: italic;
+  font-family: Georgia, serif;
+}
+
+.tool[data-tool='code'] {
+  font-size: 9px;
+}
+
+/* 입력칸은 테두리 없이, 포커스 때만 표시 */
+.titleField,
+.source,
+.authorField,
+.refForm :is(input, textarea) {
+  width: 100%;
+  border: 0;
+  outline: none;
+  color: inherit;
+  font: inherit;
+  background: none;
+  resize: none;
+}
+
+.titleField {
+  overflow: hidden;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.titleField::placeholder,
+.source::placeholder,
+.authorField::placeholder,
+.refForm ::placeholder {
+  color: var(--write-muted);
+  opacity: 1;
+}
+
+.byline {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  color: var(--write-muted);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.authorField {
+  width: auto;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--write-surface);
+  color: var(--color-black);
+  font-size: 13px;
+}
+
+.source {
+  min-height: 274px;
+  padding: 20px;
+  border-radius: 12px;
+  overflow: hidden;
+  font-size: 15px;
+  line-height: 1.7;
+  transition: box-shadow 0.15s;
+}
+
+.source:focus,
+.titleField:focus-visible {
+  box-shadow: 0 0 0 1px var(--write-placeholder);
+}
+
+.titleField:focus-visible {
+  border-radius: 12px;
+}
+
+/* 참고문헌 입력 */
+.refEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.refEditorHeading {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.refForm {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--write-surface);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.refForm :is(input, textarea) {
+  padding: 4px 0;
+}
+
+.refForm input:first-of-type {
+  font-weight: 600;
+}
+
+.refRow {
+  display: grid;
+  grid-template-columns: 1fr 100px;
+  gap: 12px;
+}
+
+.refRemove {
+  align-self: flex-end;
+  color: var(--write-muted);
+  font-size: 13px;
+}
+
+.refAdd {
+  align-self: flex-start;
+  color: var(--write-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.refRemove:hover,
+.refAdd:hover {
+  color: var(--color-black);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* ── 미리보기 ── */
+.preview {
+  position: sticky;
+  top: 77px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+  max-height: calc(100vh - 77px);
+  padding: 40px;
+  border-radius: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.previewLabel {
+  color: var(--write-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.previewTitle {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.previewTitle[data-empty] {
+  color: var(--write-placeholder);
+}
+
+.previewByline,
+.previewDate {
+  color: var(--write-muted);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.previewByline {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.previewDate {
+  font-size: 13px;
+}
+
+.previewBody {
+  --md-body-size: 16px;
+}
+
+.previewBody:empty {
+  display: none;
+}
+
+.previewRefHeading {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.previewRefs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 좁은 화면: 원본 아래에 미리보기 */
+@media (max-width: 1000px) {
+  .split {
+    grid-template-columns: minmax(0, 680px);
+  }
+
+  .preview {
+    position: static;
+    max-height: none;
+    padding: 40px 0;
+    border-top: 1px solid var(--write-placeholder);
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .topBar {
+    padding: 16px 20px;
+  }
+
+  .status {
+    display: none;
+  }
+
+  .titleField,
+  .previewTitle {
+    font-size: 28px;
+  }
+
+  .source {
+    padding: 16px 0;
+  }
+}

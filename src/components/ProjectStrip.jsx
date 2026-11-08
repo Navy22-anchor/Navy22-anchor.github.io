@@ -1,142 +1,188 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import RowCarousel, { centerSize } from './RowCarousel.jsx';
 import styles from './ProjectStrip.module.css';
 
-// 무한 스크롤처럼 보이도록 목록을 여러 번 이어 붙이고,
-// 가운데 복사본 근처에 머물도록 스크롤 위치를 순간 이동시킵니다.
-const GAP = 7;
+// 세로 줄 목록. 문서 스크롤 대신 연속값 pos(중괄호에 놓인 줄 번호)를 움직입니다.
+// 휠을 내리면 위에 있던 줄이 중괄호로 내려오고, 중괄호에 있던 줄은 아래로 내려갑니다.
+const WHEEL_DIRECTION = -1; // 1로 바꾸면 휠을 내릴 때 아래 줄이 올라옴
+const GAP = 32;
 const SETTLE_DELAY = 140;
+const EASE = 0.18;
+const MOBILE = 700;
+const MOBILE_POST_H = 160;
 
-// 화면 위아래가 항상 타일로 채워질 만큼 복사본 개수를 정함 (홀수)
-function copiesFor(projects) {
-  const loop = projects.reduce((sum, p) => sum + p.height + GAP, 0);
-  const screen = Math.max(window.innerHeight, 1200);
-  const half = Math.max(2, Math.ceil(screen / loop) + 1);
-  return half * 2 + 1;
-}
+const mod = (a, n) => ((a % n) + n) % n;
+const lerp = (a, b, t) => a + (b - a) * t;
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function focusLine() {
+function readViewport() {
   const value = getComputedStyle(document.documentElement).getPropertyValue('--focus-y');
-  return (parseFloat(value) / 100) * window.innerHeight;
+  return { w: window.innerWidth, h: window.innerHeight, focus: (parseFloat(value) / 100) * window.innerHeight };
 }
 
-function centerOf(el) {
-  return el.offsetTop + el.offsetHeight / 2;
-}
+// 중괄호와 가운데 콘텐츠 사이 거리 (Figma: 글 카드 369, 책 258)
+const braceOffset = (w) => Math.max(w / 2 + 49, 258);
 
-export default function ProjectStrip({ projects, onActiveChange }) {
-  const itemRefs = useRef([]);
+export default function ProjectStrip({ rows, initialRow = 0, indexFor, onActiveChange, onChangeItem, onOpen }) {
+  const n = rows.length;
+  const [pos, setPos] = useState(initialRow);
+  const [viewport, setViewport] = useState(readViewport);
+  const posRef = useRef(initialRow);
+  const frame = useRef(0);
   const settleTimer = useRef(0);
-  const count = projects.length;
-  const copies = useMemo(() => copiesFor(projects), [projects]);
-  const homeCopy = Math.floor(copies / 2);
+  const rootRef = useRef(null);
 
-  const loopHeight = useCallback(() => {
-    const first = itemRefs.current[0];
-    const next = itemRefs.current[count];
-    return first && next ? next.offsetTop - first.offsetTop : 0;
-  }, [count]);
+  const size = useCallback(
+    (k) => {
+      const row = rows[mod(k, n)];
+      const { w, h } = centerSize(row, indexFor(row));
+      if (viewport.w > MOBILE) return { row, w, h };
+      if (row.kind === 'posts') return { row, w, h: MOBILE_POST_H };
+      const fit = Math.min(1, (viewport.w - 32) / w);
+      return { row, w: w * fit, h: h * fit };
+    },
+    [rows, n, indexFor, viewport.w],
+  );
 
-  const scrollToItem = useCallback((el, behavior = 'auto') => {
-    window.scrollTo({ top: centerOf(el) - focusLine(), behavior });
+  // 줄 a와 a+1의 중심 사이 거리
+  const distance = useCallback((a) => size(a).h / 2 + GAP + size(a + 1).h / 2, [size]);
+
+  const apply = (p) => {
+    posRef.current = p;
+    setPos(p);
+  };
+
+  const animateTo = useCallback((target) => {
+    cancelAnimationFrame(frame.current);
+    clearTimeout(settleTimer.current);
+    if (reducedMotion()) return apply(target);
+    const step = () => {
+      const d = target - posRef.current;
+      if (Math.abs(d) < 0.002) return apply(target);
+      apply(posRef.current + d * EASE);
+      frame.current = requestAnimationFrame(step);
+    };
+    frame.current = requestAnimationFrame(step);
   }, []);
 
-  const nearestItem = useCallback(() => {
-    const line = window.scrollY + focusLine();
-    let best = null;
-    let bestDist = Infinity;
-    itemRefs.current.forEach((el, i) => {
-      if (!el) return;
-      const dist = Math.abs(centerOf(el) - line);
-      if (dist < bestDist) {
-        bestDist = dist;
-        best = { el, index: i % count, dist };
-      }
-    });
-    return best;
-  }, [count]);
+  // px만큼 굴리면 지금 간격 기준으로 그만큼 줄이 이동하고, 멈추면 가장 가까운 줄로 맞춤
+  const moveBy = useCallback(
+    (px) => {
+      cancelAnimationFrame(frame.current);
+      const p = posRef.current;
+      apply(p + px / distance(Math.floor(p)));
+      clearTimeout(settleTimer.current);
+      settleTimer.current = setTimeout(() => animateTo(Math.round(posRef.current)), SETTLE_DELAY);
+    },
+    [distance, animateTo],
+  );
 
-  // 처음 그리거나 필터가 바뀌면 가운데 복사본의 첫 작업을 브라켓 위치로
-  useLayoutEffect(() => {
-    const el = itemRefs.current[homeCopy * count];
-    if (el) scrollToItem(el);
-    onActiveChange(0);
-  }, [count, homeCopy, projects, scrollToItem, onActiveChange]);
+  const activeIndex = mod(Math.round(pos), n);
+  useEffect(() => {
+    onActiveChange(activeIndex);
+  }, [activeIndex, onActiveChange]);
 
   useEffect(() => {
-    let frame = 0;
+    const onWheel = (e) => {
+      // Shift + 휠과 가로 스와이프는 가로 넘기기용, Ctrl + 휠은 확대용
+      if (e.ctrlKey || e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1;
+      moveBy(WHEEL_DIRECTION * e.deltaY * unit);
+    };
+    const onKey = (e) => {
+      // ↓는 휠을 내릴 때와 같은 방향
+      if (e.key === 'ArrowDown') animateTo(Math.round(posRef.current) + WHEEL_DIRECTION);
+      else if (e.key === 'ArrowUp') animateTo(Math.round(posRef.current) - WHEEL_DIRECTION);
+      else return;
+      e.preventDefault();
+    };
+    const onResize = () => setViewport(readViewport());
 
-    const onScroll = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        const loop = loopHeight();
-        const home = itemRefs.current[homeCopy * count];
-        if (loop > 0 && home) {
-          const homeTop = centerOf(home) - focusLine();
-          if (window.scrollY < homeTop - loop / 2) window.scrollBy(0, loop);
-          else if (window.scrollY > homeTop + loop / 2) window.scrollBy(0, -loop);
-        }
-
-        const nearest = nearestItem();
-        if (nearest) onActiveChange(nearest.index);
-      });
-
-      // 스크롤이 멈추면 가장 가까운 작업을 브라켓 사이로 맞춤
-      clearTimeout(settleTimer.current);
-      settleTimer.current = setTimeout(() => {
-        const nearest = nearestItem();
-        if (nearest && nearest.dist > 1) scrollToItem(nearest.el, 'smooth');
-      }, SETTLE_DELAY);
+    // 터치는 손가락을 따라감 (아래로 끌면 위 줄이 내려옴)
+    let touchY = null;
+    const root = rootRef.current;
+    const onTouchStart = (e) => {
+      touchY = e.touches[0].clientY;
+    };
+    const onTouchMove = (e) => {
+      if (touchY === null) return;
+      e.preventDefault();
+      const y = e.touches[0].clientY;
+      moveBy(touchY - y);
+      touchY = y;
+    };
+    const onTouchEnd = () => {
+      touchY = null;
     };
 
-    const onResize = () => {
-      const nearest = nearestItem();
-      if (nearest) scrollToItem(nearest.el);
-    };
-
-    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('keydown', onKey);
     window.addEventListener('resize', onResize);
+    root.addEventListener('touchstart', onTouchStart, { passive: true });
+    root.addEventListener('touchmove', onTouchMove, { passive: false });
+    root.addEventListener('touchend', onTouchEnd);
     return () => {
-      cancelAnimationFrame(frame);
+      cancelAnimationFrame(frame.current);
       clearTimeout(settleTimer.current);
-      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', onResize);
+      root.removeEventListener('touchstart', onTouchStart);
+      root.removeEventListener('touchmove', onTouchMove);
+      root.removeEventListener('touchend', onTouchEnd);
     };
-  }, [count, homeCopy, loopHeight, nearestItem, scrollToItem, onActiveChange]);
+  }, [moveBy, animateTo]);
 
-  const items = Array.from({ length: copies }, (_, copy) =>
-    projects.map((project, i) => ({
-      project,
-      key: `${copy}-${project.id}`,
-      slot: copy * count + i,
-      clone: copy !== homeCopy,
-    })),
-  ).flat();
+  // 중괄호 간격을 중괄호 사이 줄의 크기에 맞춤 (줄 사이를 지날 때는 부드럽게 보간)
+  const base = Math.floor(pos);
+  const frac = pos - base;
+  const brace = lerp(braceOffset(size(base).w), braceOffset(size(base + 1).w), frac);
+  useLayoutEffect(() => {
+    document.documentElement.style.setProperty('--brace-offset', `${brace}px`);
+  }, [brace]);
+  useEffect(() => () => document.documentElement.style.removeProperty('--brace-offset'), []);
+
+  // 중괄호 기준선에서 위아래로 화면이 찰 때까지 줄을 쌓음 (끝없이 반복)
+  const baseY = viewport.focus - frac * distance(base);
+  const items = [];
+  for (let k = base, y = baseY; y - size(k).h / 2 < viewport.h; y += distance(k), k++) {
+    items.push({ k, y });
+  }
+  for (let k = base - 1, y = baseY - distance(k); y + size(k).h / 2 > 0; y -= distance(k - 1), k--) {
+    items.unshift({ k, y });
+  }
 
   return (
-    <ol className={styles.strip} aria-label="작업 목록">
-      {items.map(({ project, key, slot, clone }) => (
-        <li
-          key={key}
-          ref={(el) => {
-            itemRefs.current[slot] = el;
-          }}
-          className={styles.item}
-          aria-hidden={clone || undefined}
-        >
-          <button
-            type="button"
-            className={styles.tile}
-            style={{
-              width: project.width,
-              height: project.height,
-              background: project.image ? `center / cover url(${project.image})` : project.color,
+    <div ref={rootRef} className={styles.viewport} aria-label="작업 목록">
+      {items.map(({ k, y }) => {
+        const { row, h } = size(k);
+        const reveal = Math.max(0, 1 - Math.abs(k - pos) * 2); // 반 줄 이상 벗어나면 가운데 것만
+        const isActive = k === Math.round(pos);
+        return (
+          <div
+            key={k}
+            className={styles.row}
+            style={{ height: h, transform: `translateY(${y - h / 2}px)`, zIndex: isActive ? 2 : 1 }}
+            aria-hidden={!isActive || undefined}
+            onClickCapture={(e) => {
+              // 중괄호 밖의 줄을 누르면 그 줄을 중괄호로 가져옴
+              if (!isActive) {
+                e.stopPropagation();
+                animateTo(k);
+              }
             }}
-            aria-label={project.title}
-            tabIndex={clone ? -1 : undefined}
-            onClick={(e) => scrollToItem(e.currentTarget.parentElement, 'smooth')}
-          />
-        </li>
-      ))}
-    </ol>
+          >
+            <RowCarousel
+              row={row}
+              index={indexFor(row)}
+              reveal={reveal}
+              onChange={(i) => onChangeItem(row, i)}
+              onOpen={onOpen}
+            />
+          </div>
+        );
+      })}
+    </div>
   );
 }

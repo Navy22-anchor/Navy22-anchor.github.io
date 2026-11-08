@@ -1,0 +1,90 @@
+.card {
+  display: flex;
+  gap: 16px;
+  padding: 24px;
+  background: var(--color-white);
+  color: var(--color-black);
+  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.14));
+  text-align: left;
+}
+
+.vertical {
+  flex-direction: column;
+  width: 320px;
+}
+
+.horizontal {
+  flex-direction: row;
+  align-items: center;
+  gap: 24px;
+  width: 640px;
+}
+
+.thumbnail {
+  flex: none;
+  background: #e5e5eb center / cover no-repeat;
+}
+
+.vertical .thumbnail {
+  order: 1; /* 날짜·제목 다음 */
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.horizontal .thumbnail {
+  width: 200px;
+  height: 150px;
+}
+
+.text {
+  display: contents;
+}
+
+.horizontal .text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.date {
+  color: #808087;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.title,
+.excerpt {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  font-family: 'Noto Sans KR', sans-serif;
+  word-break: keep-all;
+}
+
+.title {
+  -webkit-line-clamp: 2;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.excerpt {
+  order: 2;
+  -webkit-line-clamp: 3;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.horizontal .excerpt {
+  -webkit-line-clamp: 2;
+}
