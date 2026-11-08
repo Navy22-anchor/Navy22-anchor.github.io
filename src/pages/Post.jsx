@@ -1,6 +1,7 @@
 import Markdown from '../components/Markdown.jsx';
 import ReferenceCard from '../components/ReferenceCard.jsx';
 import { findPost } from '../data/posts.js';
+import backIcon from '../assets/back.svg';
 import styles from './Post.module.css';
 
 function Block({ block }) {
@@ -23,6 +24,12 @@ function Block({ block }) {
   }
 }
 
+// 이전 화면이 있으면 그리로, 이 주소로 바로 열었으면 홈으로
+function goBack() {
+  if (window.history.length > 1) window.history.back();
+  else window.location.hash = '#/';
+}
+
 export default function Post({ id }) {
   const post = findPost(id);
 
@@ -30,8 +37,9 @@ export default function Post({ id }) {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <button type="button" className={styles.icon} aria-label="메뉴" />
-          <button type="button" className={styles.icon} aria-label="검색" />
+          <button type="button" className={styles.back} aria-label="뒤로가기" onClick={goBack}>
+            <img src={backIcon} alt="" width="24" height="24" />
+          </button>
         </div>
         <a href="#/" className={styles.pill}>나의 블로그</a>
         <a href="#/write" className={styles.icon} aria-label="새 글 쓰기" />

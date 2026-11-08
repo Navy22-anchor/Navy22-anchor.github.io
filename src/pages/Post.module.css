@@ -33,6 +33,21 @@
   gap: 16px;
 }
 
+.back {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.back img {
+  display: block;
+}
+
+.back:hover {
+  background: var(--post-placeholder);
+}
+
 .icon {
   display: block;
   width: 24px;
