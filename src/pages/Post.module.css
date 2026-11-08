@@ -1,14 +1,14 @@
 /* Figma "Blog Reading Page" (1440). 글자는 검은색, 회색 보조 글자만 #808087 유지 */
 
 .page {
-  --post-muted: #808087;
-  --post-placeholder: #e5e5eb;
-  --post-pill: #f2f2f5;
+  --post-muted: var(--color-secondary);
+  --post-placeholder: var(--color-placeholder);
+  --post-pill: var(--color-fill);
   --font-post: 'Inter', 'Noto Sans KR', sans-serif;
   --font-post-body: 'Noto Sans KR', sans-serif;
 
   min-height: 100vh;
-  color: var(--color-black);
+  color: var(--color-text);
   font-family: var(--font-post);
 }
 
@@ -42,6 +42,7 @@
 
 .back img {
   display: block;
+  filter: var(--color-icon-filter);
 }
 
 .back:hover {

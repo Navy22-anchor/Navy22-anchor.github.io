@@ -1,14 +1,14 @@
 /* 마크다운 본문. 글 뷰어(Post)와 같은 서식, 글자 크기만 --md-body-size로 조절 */
 .markdown {
-  --md-muted: #808087;
-  --md-surface: #f2f2f5;
-  --md-placeholder: #e5e5eb;
+  --md-muted: var(--color-secondary);
+  --md-surface: var(--color-fill);
+  --md-placeholder: var(--color-placeholder);
 
   display: flex;
   flex-direction: column;
   gap: 24px;
   min-width: 0;
-  color: var(--color-black);
+  color: var(--color-text);
   font-family: 'Noto Sans KR', sans-serif;
   font-size: var(--md-body-size, 18px);
   line-height: 1.7;
