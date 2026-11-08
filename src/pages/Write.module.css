@@ -79,11 +79,11 @@
 /* ── 왼쪽 원본 / 오른쪽 미리보기 (600 + 40 + 600) ── */
 .split {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 600px));
-  justify-content: center;
+  /* 화면 폭을 꽉 채움: 양옆 32 (상단 바 버튼과 같은 선), 1440 기준 628 + 120 + 628 */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
-  gap: clamp(40px, 8.34vw, 120px); /* 1440 기준 120 */
-  padding: 32px 20px;
+  gap: clamp(40px, 8.34vw, 120px);
+  padding: 32px;
 }
 
 .editor {
@@ -126,7 +126,7 @@
   font-family: Georgia, serif;
 }
 
-.tool[data-tool='code'] {
+.tool:is([data-tool='code'], [data-tool='reference']) {
   font-size: 9px;
 }
 
@@ -187,16 +187,6 @@
   overflow: hidden;
   font-size: 15px;
   line-height: 1.7;
-  transition: box-shadow 0.15s;
-}
-
-.source:focus,
-.titleField:focus-visible {
-  box-shadow: 0 0 0 1px var(--write-placeholder);
-}
-
-.titleField:focus-visible {
-  border-radius: 12px;
 }
 
 /* 참고문헌 입력 */
@@ -204,12 +194,6 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.refEditorHeading {
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.5;
 }
 
 .refForm {
@@ -244,15 +228,7 @@
   font-size: 13px;
 }
 
-.refAdd {
-  align-self: flex-start;
-  color: var(--write-muted);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.refRemove:hover,
-.refAdd:hover {
+.refRemove:hover {
   color: var(--color-black);
 }
 

@@ -348,6 +348,16 @@ export default function Write() {
                 {tool.icon}
               </button>
             ))}
+            <button
+              type="button"
+              className={styles.tool}
+              data-tool="reference"
+              title="참고문헌 추가"
+              aria-label="참고문헌 추가"
+              onClick={() => update({ references: [...draft.references, emptyReference] })}
+            >
+              [1]
+            </button>
           </div>
 
           <textarea
@@ -375,7 +385,6 @@ export default function Write() {
           <textarea
             ref={sourceRef}
             className={styles.source}
-            placeholder={'## 소제목\n\n본문 문단을 마크다운으로 작성합니다. **굵게**, *기울임*, [링크](https://example.com)\n\n$$ e^{i\\pi} + 1 = 0 $$\n\n- 목록 항목'}
             aria-label="본문 (마크다운)"
             spellCheck={false}
             value={draft.markdown}
@@ -383,35 +392,29 @@ export default function Write() {
             onKeyDown={onSourceKeyDown}
           />
 
-          <div className={styles.refEditor}>
-            <h2 className={styles.refEditorHeading}>참고문헌</h2>
-            {draft.references.map((ref, i) => (
-              <fieldset key={i} className={styles.refForm}>
-                <legend className={styles.srOnly}>참고문헌 {i + 1}</legend>
-                <input placeholder="제목 (저자, 연도)" value={ref.title} onChange={(e) => setReference(i, { title: e.target.value })} />
-                <div className={styles.refRow}>
-                  <input placeholder="저자" value={ref.author} onChange={(e) => setReference(i, { author: e.target.value })} />
-                  <input placeholder="연도" value={ref.year} onChange={(e) => setReference(i, { year: e.target.value })} />
-                </div>
-                <input placeholder="링크 https://" type="url" value={ref.url} onChange={(e) => setReference(i, { url: e.target.value })} />
-                <textarea placeholder="설명 또는 메모" rows={2} value={ref.about} onChange={(e) => setReference(i, { about: e.target.value })} />
-                <button
-                  type="button"
-                  className={styles.refRemove}
-                  onClick={() => update({ references: draft.references.filter((_, j) => j !== i) })}
-                >
-                  삭제
-                </button>
-              </fieldset>
-            ))}
-            <button
-              type="button"
-              className={styles.refAdd}
-              onClick={() => update({ references: [...draft.references, emptyReference] })}
-            >
-              + 참고문헌 추가
-            </button>
-          </div>
+          {draft.references.length > 0 && (
+            <div className={styles.refEditor} aria-label="참고문헌">
+              {draft.references.map((ref, i) => (
+                <fieldset key={i} className={styles.refForm}>
+                  <legend className={styles.srOnly}>참고문헌 {i + 1}</legend>
+                  <input placeholder="제목 (저자, 연도)" value={ref.title} onChange={(e) => setReference(i, { title: e.target.value })} />
+                  <div className={styles.refRow}>
+                    <input placeholder="저자" value={ref.author} onChange={(e) => setReference(i, { author: e.target.value })} />
+                    <input placeholder="연도" value={ref.year} onChange={(e) => setReference(i, { year: e.target.value })} />
+                  </div>
+                  <input placeholder="링크 https://" type="url" value={ref.url} onChange={(e) => setReference(i, { url: e.target.value })} />
+                  <textarea placeholder="설명 또는 메모" rows={2} value={ref.about} onChange={(e) => setReference(i, { about: e.target.value })} />
+                  <button
+                    type="button"
+                    className={styles.refRemove}
+                    onClick={() => update({ references: draft.references.filter((_, j) => j !== i) })}
+                  >
+                    삭제
+                  </button>
+                </fieldset>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className={styles.preview} aria-label="미리보기">
