@@ -1,0 +1,64 @@
+/* 한글은 S-Core Dream, 라틴 문자는 Inter (Figma 디자인 기준) */
+@font-face {
+  font-family: 'S-Core Dream';
+  src: url('/fonts/SCDream4.otf') format('opentype');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'S-Core Dream';
+  src: url('/fonts/SCDream6.otf') format('opentype');
+  font-weight: 600;
+  font-display: swap;
+}
+
+:root {
+  --color-black: #000000;
+  --color-white: #ffffff;
+  --color-muted: #bdbdc2;
+  --color-footnote: #999999;
+
+  --font-sans: 'Inter', 'S-Core Dream', system-ui, sans-serif;
+  --font-system: -apple-system, 'SF Pro Text', 'Inter', system-ui, sans-serif;
+
+  /* 브라켓과 활성 작업이 놓이는 가로선 (1080 기준 y=597) */
+  --focus-y: 55.3vh;
+  --edge: 13px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  margin: 0;
+  background: var(--color-white);
+  color: var(--color-black);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
