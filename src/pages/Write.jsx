@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Markdown from '../components/Markdown.jsx';
 import ReferenceCard from '../components/ReferenceCard.jsx';
-import { clearDraft, emptyDraft, formatDate, loadDraft, publishPost, saveDraft } from '../data/localPosts.js';
+import { stringifyPost } from '../data/frontMatter.js';
+import { clearDraft, emptyDraft, formatDate, loadDraft, postId, publishPost, saveDraft } from '../data/localPosts.js';
+import { categories } from '../data/projects.js';
 import styles from './Write.module.css';
 
 // Figma "Blog Post Editor" (21:38): 왼쪽 마크다운 원본, 오른쪽 읽기 미리보기
@@ -70,10 +72,86 @@ function useAutosize(value) {
 
 const emptyReference = { title: '', author: '', year: '', url: '', about: '' };
 
+// 브라우저에서 파일 내려받기
+function download(filename, text) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
+  const a = Object.assign(document.createElement('a'), { href: url, download: filename });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// 발행 창: .md 파일을 내려받아 content/posts/ 에 커밋하면 사이트에 게시됨
+function PublishDialog({ post, onCategory, onClose, onDownload, downloaded }) {
+  const ref = useRef(null);
+  // 창은 사라질 때 DOM에서 빠지며 닫힘 (정리 함수에서 close()하면 onClose가 불려 바로 닫혀 버림)
+  useEffect(() => {
+    if (!ref.current.open) ref.current.showModal();
+  }, []);
+
+  const path = `content/posts/${post.id}.md`;
+
+  return (
+    <dialog ref={ref} className={styles.dialog} onClose={onClose} aria-labelledby="publish-heading">
+      <h2 id="publish-heading" className={styles.dialogHeading}>발행하기</h2>
+      <p className={styles.dialogText}>
+        이 블로그는 서버가 없는 정적 사이트라서, 글 파일을 저장소에 올려야 모두에게 보입니다.
+      </p>
+
+      <label className={styles.dialogField}>
+        분류
+        <select value={post.category} onChange={(e) => onCategory(e.target.value)} disabled={downloaded}>
+          {categories.map((c) => (
+            <option key={c}>{c}</option>
+          ))}
+        </select>
+      </label>
+
+      <ol className={styles.dialogSteps}>
+        <li>
+          아래 버튼으로 <code>{post.id}.md</code> 파일을 내려받습니다.
+        </li>
+        <li>
+          파일을 저장소의 <code>content/posts/</code> 폴더에 넣습니다.
+        </li>
+        <li>
+          커밋하고 <code>main</code>에 push하면 몇 분 뒤 <code>#/post/{post.id}</code> 주소로 게시됩니다.
+        </li>
+      </ol>
+      <p className={styles.dialogNote}>
+        GitHub 웹사이트에서 올릴 때는 저장소의 <code>content/posts</code> 폴더 → Add file → Upload files 를 쓰면 됩니다.
+      </p>
+
+      <div className={styles.dialogActions}>
+        {downloaded ? (
+          <>
+            <span className={styles.status} role="status">내려받음 · {path}</span>
+            <a href={`#/post/${post.id}`} className={`${styles.pill} ${styles.primary}`}>
+              이 브라우저에서 글 보기
+            </a>
+          </>
+        ) : (
+          <>
+            <button type="button" className={styles.pill} onClick={() => ref.current.close()}>
+              취소
+            </button>
+            <button type="button" className={`${styles.pill} ${styles.primary}`} onClick={onDownload}>
+              .md 파일 내려받기
+            </button>
+          </>
+        )}
+      </div>
+    </dialog>
+  );
+}
+
 export default function Write() {
   const [draft, setDraft] = useState(loadDraft);
   const [status, setStatus] = useState('');
   const [now, setNow] = useState(() => formatDate());
+  const [pending, setPending] = useState(null); // 발행 창에 띄운 글
+  const [downloaded, setDownloaded] = useState(false);
   const pendingSelection = useRef(null);
   const statusTimer = useRef(0);
 
@@ -122,11 +200,18 @@ export default function Write() {
       titleRef.current?.focus();
       return;
     }
+    const date = new Date();
     const references = draft.references.filter((ref) => ref.title.trim());
-    const post = publishPost({ ...draft, references }, formatDate());
-    if (!post) return flash('발행하지 못했어요');
+    setDownloaded(false);
+    setPending({ ...draft, references, id: postId(date), date: formatDate(date), category: categories[0] });
+  };
+
+  const downloadPost = () => {
+    download(`${pending.id}.md`, stringifyPost(pending));
+    // 저장소에 올리기 전에도 이 브라우저에서는 바로 볼 수 있게 남겨 둠
+    publishPost(pending);
     clearDraft();
-    window.location.hash = `#/post/${post.id}`;
+    setDownloaded(true);
   };
 
   // Ctrl+S 임시저장
@@ -172,6 +257,20 @@ export default function Write() {
           </button>
         </div>
       </header>
+
+      {pending && (
+        <PublishDialog
+          post={pending}
+          downloaded={downloaded}
+          onCategory={(category) => setPending((p) => ({ ...p, category }))}
+          onDownload={downloadPost}
+          onClose={() => {
+            setPending(null);
+            // 내려받은 뒤 창을 닫으면 새 글을 쓸 수 있게 비움
+            if (downloaded) setDraft(emptyDraft);
+          }}
+        />
+      )}
 
       <div className={styles.split}>
         <section className={styles.editor} aria-label="마크다운 작성">

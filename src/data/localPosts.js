@@ -1,5 +1,6 @@
-// 글 작성 페이지의 임시저장·발행 글은 이 브라우저(localStorage)에만 저장됩니다.
-// GitHub Pages는 서버가 없어서, 모두에게 보이게 하려면 글 파일을 저장소에 올려야 합니다.
+// 글 작성 페이지의 임시저장 글과, 발행했지만 아직 저장소에 올리지 않은 글은
+// 이 브라우저(localStorage)에만 저장됩니다. GitHub Pages는 서버가 없어서,
+// 모두에게 보이게 하려면 발행 때 받은 .md 파일을 content/posts/ 에 커밋해야 합니다.
 const DRAFT_KEY = 'hanlog:draft';
 const POSTS_KEY = 'hanlog:posts';
 
@@ -35,10 +36,16 @@ export const clearDraft = () => {
 
 export const loadLocalPosts = () => read(POSTS_KEY, []);
 
-export function publishPost(draft, date) {
-  const post = { ...draft, id: `local-${Date.now()}`, date };
-  const saved = write(POSTS_KEY, [post, ...loadLocalPosts()]);
-  return saved ? post : null;
+// 같은 id(파일 이름)로 다시 발행하면 덮어씀
+export function publishPost(post) {
+  const others = loadLocalPosts().filter((p) => p.id !== post.id);
+  return write(POSTS_KEY, [post, ...others]) ? post : null;
+}
+
+// 파일 이름(=글 주소). 예: 2026-11-08-1611 → content/posts/2026-11-08-1611.md, #/post/2026-11-08-1611
+export function postId(d = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
 }
 
 // 2026.11.08 16:11 형식

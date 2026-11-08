@@ -1,4 +1,7 @@
 import { loadLocalPosts } from './localPosts.js';
+import { repoPosts } from './repoPosts.js';
+
+export { repoPosts };
 
 // 글 데이터. body는 위에서부터 순서대로 그려지는 블록 목록입니다.
 // type: 'p' 문단 | 'h2' 소제목 | 'image' 사진(src 없으면 회색 자리) | 'faq' 자주 묻는 질문
@@ -40,7 +43,8 @@ export const posts = [
   },
 ];
 
-// 글 작성 페이지에서 발행한 글(이 브라우저에만 저장)도 함께 찾음
+// 저장소 글(content/posts/*.md) → 이 브라우저에서 방금 발행한 글 → 예시 글 순서로 찾음
 export function findPost(id) {
-  return loadLocalPosts().find((post) => post.id === id) ?? posts.find((post) => post.id === id) ?? posts[0];
+  const byId = (post) => post.id === id;
+  return repoPosts.find(byId) ?? loadLocalPosts().find(byId) ?? posts.find(byId) ?? repoPosts[0] ?? posts[0];
 }

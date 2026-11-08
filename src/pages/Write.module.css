@@ -359,3 +359,82 @@
     padding: 16px 0;
   }
 }
+
+/* ── 발행 창 ── */
+.dialog {
+  width: min(480px, calc(100vw - 32px));
+  padding: 28px;
+  border: 0;
+  border-radius: 16px;
+  color: var(--color-black);
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.18);
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 0.3);
+}
+
+.dialog code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--write-surface);
+  font-size: 0.9em;
+  word-break: break-all;
+}
+
+.dialogHeading {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.dialogText,
+.dialogNote {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.dialogNote {
+  color: var(--write-muted);
+  font-size: 13px;
+}
+
+.dialogField {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dialogField select {
+  padding: 6px 10px;
+  border: 1px solid var(--write-placeholder);
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 400;
+}
+
+.dialogSteps {
+  margin: 16px 0 12px;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.dialogActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.dialogActions .status {
+  margin-right: auto;
+  word-break: break-all;
+}
