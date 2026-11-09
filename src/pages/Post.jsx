@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import Markdown from '../components/Markdown.jsx';
 import ReferenceCard from '../components/ReferenceCard.jsx';
 import { deletePost, loadToken } from '../data/github.js';
@@ -33,43 +34,6 @@ function Block({ block }) {
 function goBack() {
   if (window.history.length > 1) window.history.back();
   else window.location.hash = '#/';
-}
-
-// Figma "Delete confirm dialog" (87:3860)
-function DeleteDialog({ onConfirm, onClose, busy, error }) {
-  const ref = useRef(null);
-  // 창은 사라질 때 DOM에서 빠지며 닫힘
-  useEffect(() => {
-    if (!ref.current.open) ref.current.showModal();
-  }, []);
-
-  return (
-    <dialog
-      ref={ref}
-      className={styles.dialog}
-      onClose={onClose}
-      onCancel={(e) => busy && e.preventDefault()}
-      aria-labelledby="delete-heading"
-      aria-busy={busy}
-    >
-      <h2 id="delete-heading" className={styles.dialogHeading}>
-        삭제 하겠습니까?
-      </h2>
-      {error && (
-        <p className={styles.dialogError} role="alert">
-          {error}
-        </p>
-      )}
-      <div className={styles.dialogActions}>
-        <button type="button" className={`${styles.dialogButton} ${styles.danger}`} onClick={onConfirm} disabled={busy}>
-          {busy ? '삭제 중…' : '예'}
-        </button>
-        <button type="button" className={styles.dialogButton} onClick={() => ref.current.close()} disabled={busy}>
-          아니오
-        </button>
-      </div>
-    </dialog>
-  );
 }
 
 export default function Post({ id }) {
@@ -129,7 +93,7 @@ export default function Post({ id }) {
       </header>
 
       {confirming && (
-        <DeleteDialog
+        <ConfirmDialog
           onConfirm={onDelete}
           onClose={() => {
             setConfirming(false);
