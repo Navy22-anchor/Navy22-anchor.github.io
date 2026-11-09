@@ -16,8 +16,9 @@ function useHashPath() {
 export default function App() {
   const path = useHashPath();
   const postMatch = path.match(/^\/post(?:\/([^/]+))?\/?$/);
-  const isWrite = /^\/write\/?$/.test(path);
-  const page = postMatch ? 'post' : isWrite ? 'write' : 'home';
+  // #/write 새 글, #/write/<id> 기존 글 수정
+  const writeMatch = path.match(/^\/write(?:\/([^/]+))?\/?$/);
+  const page = postMatch ? 'post' : writeMatch ? 'write' : 'home';
 
   useEffect(() => {
     document.documentElement.dataset.page = page;
@@ -25,6 +26,6 @@ export default function App() {
   }, [page, path]);
 
   if (postMatch) return <Post id={postMatch[1]} />;
-  if (isWrite) return <Write />;
+  if (writeMatch) return <Write key={path} editId={writeMatch[1]} />;
   return <Landing />;
 }

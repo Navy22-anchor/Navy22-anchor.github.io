@@ -2,7 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import Markdown from '../components/Markdown.jsx';
 import ReferenceCard from '../components/ReferenceCard.jsx';
 import { stringifyPost } from '../data/frontMatter.js';
-import { clearDraft, emptyDraft, formatDate, loadDraft, postId, publishPost, saveDraft } from '../data/localPosts.js';
+import { clearDraft, emptyDraft, formatDate, loadDraft, loadSavedDraft, postId, publishPost, saveDraft } from '../data/localPosts.js';
+import { findPost, toMarkdown } from '../data/posts.js';
 import { loadCategories } from '../data/categories.js';
 import { TOKEN_HELP_URL, clearToken, commitPost, loadToken, saveToken } from '../data/github.js';
 import backIcon from '../assets/back.svg';
@@ -271,8 +272,23 @@ function PublishDialog({ post, onCategory, onClose, onPublish, onDownload, token
   );
 }
 
-export default function Write() {
-  const [draft, setDraft] = useState(loadDraft);
+// 수정할 글을 편집 화면 형태로. 수정하다 임시저장한 내용이 있으면 그것부터
+function loadEditDraft(id) {
+  const saved = loadSavedDraft(id);
+  if (saved) return { ...emptyDraft, ...saved };
+  const post = findPost(id);
+  return {
+    title: post.title ?? '',
+    author: post.author ?? '',
+    markdown: toMarkdown(post),
+    references: (post.references ?? []).map((ref) => ({ ...emptyReference, ...ref })),
+  };
+}
+
+export default function Write({ editId }) {
+  // 수정이면 원래 글의 id(파일 이름)·날짜·카테고리를 그대로 두고 내용만 덮어씀
+  const [original] = useState(() => (editId ? findPost(editId) : null));
+  const [draft, setDraft] = useState(() => (original ? loadEditDraft(original.id) : loadDraft()));
   const [status, setStatus] = useState('');
   const [pending, setPending] = useState(null); // 발행 창에 띄운 글
   const [token, setToken] = useState(loadToken);
@@ -311,8 +327,8 @@ export default function Write() {
   };
 
   const save = useCallback(() => {
-    flash(saveDraft(draft) ? `임시저장됨 ${formatDate().slice(-5)}` : '저장하지 못했어요');
-  }, [draft]);
+    flash(saveDraft(draft, original?.id) ? `임시저장됨 ${formatDate().slice(-5)}` : '저장하지 못했어요');
+  }, [draft, original]);
 
   const publish = () => {
     if (!draft.title.trim()) {
@@ -322,14 +338,20 @@ export default function Write() {
     }
     const date = new Date();
     const references = draft.references.filter((ref) => ref.title.trim());
-    setPending({ ...draft, references, id: postId(date), date: formatDate(date), category: loadCategories()[0] });
+    setPending(
+      original
+        ? { ...draft, references, id: original.id, date: original.date || formatDate(date), category: original.category || loadCategories()[0] }
+        : { ...draft, references, id: postId(date), date: formatDate(date), category: loadCategories()[0] },
+    );
   };
 
   // 이 브라우저에서는 바로 보이게 남겨 두고 글 페이지로
   const finishPublish = (post) => {
     publishPost(post);
-    clearDraft();
-    window.location.hash = `#/post/${post.id}`;
+    clearDraft(original?.id);
+    // 수정이면 편집 화면을 기록에서 지워, 글에서 뒤로가기 하면 수정 전 화면으로 돌아오지 않게
+    if (original) window.location.replace(`#/post/${post.id}`);
+    else window.location.hash = `#/post/${post.id}`;
   };
 
   // 발행: GitHub 저장소에 content/posts/<id>.md 로 커밋
@@ -384,7 +406,7 @@ export default function Write() {
   };
 
   const references = draft.references.filter((ref) => ref.title.trim());
-  const isEmpty = JSON.stringify(draft) === JSON.stringify(emptyDraft);
+  const isEmpty = !original && JSON.stringify(draft) === JSON.stringify(emptyDraft);
 
   return (
     <div className={styles.page}>
@@ -392,7 +414,7 @@ export default function Write() {
         <button type="button" className={styles.back} aria-label="뒤로가기" onClick={goBack}>
           <img src={backIcon} alt="" width="24" height="24" />
         </button>
-        <p className={styles.pill}>글 작성</p>
+        <p className={styles.pill}>{original ? '글 수정' : '글 작성'}</p>
         <div className={styles.actions}>
           <span className={styles.status} role="status">
             {status}
