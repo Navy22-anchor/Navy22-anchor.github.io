@@ -100,6 +100,7 @@ export default function ProjectStrip({ ref, rows, initialRow = 0, indexFor, onAc
     const onWheel = (e) => {
       // Shift + 휠과 가로 스와이프는 가로 넘기기용, Ctrl + 휠은 확대용
       if (e.ctrlKey || e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      if (e.target.closest?.('[role="dialog"]')) return; // 달력 하루 일정은 그 안에서 스크롤
       e.preventDefault();
       const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1;
       moveBy(WHEEL_DIRECTION * e.deltaY * unit);

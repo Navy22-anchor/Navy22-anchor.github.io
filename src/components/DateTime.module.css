@@ -137,17 +137,64 @@
   opacity: 0;
 }
 
+/* 닫기 3단계: 선택한 주가 제자리로 가는 동안 나머지 주가 나타남 */
+.week[data-entering] {
+  animation: weekIn 0.25s var(--dt-ease) 0.3s both;
+}
+
+@keyframes weekIn {
+  from {
+    opacity: 0;
+  }
+}
+
 /* 하루 보기: Figma 빈 공간 220px의 70%. 3단계로 일정이 아래에서 올라옴 */
 .dayEvents {
   position: relative;
   height: 154px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: none;
 }
 
 .timeline {
   position: relative;
   animation: dayRise 0.5s var(--dt-ease) 0.35s both;
+}
+
+/* 다음 날로 넘어가면 아래에서, 전날로 넘어가면 위에서 살짝 들어옴 */
+.timelineNext {
+  animation: dayNext 0.3s var(--dt-ease) both;
+}
+
+.timelinePrev {
+  animation: dayPrev 0.3s var(--dt-ease) both;
+}
+
+@keyframes dayNext {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+
+@keyframes dayPrev {
+  from {
+    transform: translateY(-40px);
+    opacity: 0;
+  }
+}
+
+/* 닫기 1단계: 일정이 아래로 내려가며 닫힘 */
+.dayEvents[data-closing] .timeline {
+  animation: dayFall 0.3s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+@keyframes dayFall {
+  to {
+    transform: translateY(154px);
+    opacity: 0;
+  }
 }
 
 @keyframes dayRise {
@@ -219,7 +266,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .week,
-  .timeline {
+  .timeline,
+  .timelineNext,
+  .timelinePrev,
+  .dayEvents[data-closing] .timeline {
     transition: none;
     animation: none;
   }
