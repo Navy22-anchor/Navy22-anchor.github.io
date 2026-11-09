@@ -35,18 +35,18 @@
   background: var(--dt-fill-hover);
 }
 
-/* ── 달력 (Figma "Date and time - Pickers", 370 폭) ── */
+/* ── 달력 (Figma "Date and time - Pickers" 370 폭의 70%, 머리말 알약과 같은 비율. Figma "Calendar 70% (proposal)") ── */
 .calendar {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 6px);
   right: 0;
   z-index: 3;
-  width: 370px;
-  border-radius: 13px;
+  width: 259px;
+  border-radius: 9px;
   overflow: hidden;
   background: var(--dt-panel);
   backdrop-filter: blur(50px);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.1);
+  box-shadow: 0 7px 21px rgb(0 0 0 / 0.1);
   color: var(--color-text);
   pointer-events: auto;
 }
@@ -60,23 +60,23 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 40px;
-  padding: 10px 16px 0;
+  height: 28px;
+  padding: 7px 11.2px 0;
 }
 
 .monthTitle {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 17px;
+  gap: 4.2px;
+  font-size: 11.9px;
   font-weight: 590;
-  line-height: 22px;
-  letter-spacing: -0.43px;
+  line-height: 15.4px;
+  letter-spacing: -0.3px;
 }
 
 .arrows {
   display: flex;
-  gap: 28px;
+  gap: 19.6px;
 }
 
 .accent {
@@ -85,9 +85,14 @@
   color: var(--dt-blue);
 }
 
+.accent svg {
+  width: 5.6px;
+  height: 9.8px;
+}
+
 .arrows .accent {
-  width: 20px;
-  height: 24px;
+  width: 14px;
+  height: 16.8px;
   color: var(--dt-blue);
 }
 
@@ -95,39 +100,39 @@
 .week {
   display: flex;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 11.2px;
 }
 
 .weekdays {
-  height: 20px;
+  height: 14px;
   align-items: center;
   color: var(--dt-tertiary);
-  font-size: 13px;
+  font-size: 9.1px;
   font-weight: 590;
-  line-height: 18px;
+  line-height: 12.6px;
 }
 
 .weekdays span {
-  width: 32px;
+  width: 22.4px;
   text-align: center;
 }
 
 .weeks {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  padding-top: 3px;
+  gap: 4.9px;
+  padding-top: 2.1px;
 }
 
 .day {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 30.8px;
+  height: 30.8px;
   border-radius: 50%;
-  font-size: 20px;
-  line-height: 25px;
-  letter-spacing: -0.45px;
+  font-size: 14px;
+  line-height: 17.5px;
+  letter-spacing: -0.3px;
 }
 
 button.day:hover {
@@ -141,7 +146,7 @@ button.day:hover {
 .day[data-selected] {
   background: rgb(0 136 255 / 0.12);
   color: var(--dt-blue);
-  font-size: 24px;
+  font-size: 16.8px;
   font-weight: 510;
 }
 
@@ -149,20 +154,12 @@ button.day:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 52px;
-  margin: 11px 16px 0;
+  height: 36.4px;
+  margin: 7.7px 11.2px 0;
   border-top: 0.5px solid var(--dt-separator);
-  font-size: 17px;
-  line-height: 22px;
-  letter-spacing: -0.43px;
-}
-
-/* 달력 안의 시간 알약은 원래 크기 */
-.timeRow .pill {
-  padding: 6px 11px;
-  font-size: 17px;
-  line-height: 22px;
-  letter-spacing: -0.43px;
+  font-size: 11.9px;
+  line-height: 15.4px;
+  letter-spacing: -0.3px;
 }
 
 /* 다크 모드: iOS Colors 컬렉션의 Dark 값 */
