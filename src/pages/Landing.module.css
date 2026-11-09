@@ -140,6 +140,36 @@
   color: var(--color-text);
 }
 
+/* "−": 목록 첫 줄(AI) 2px 위 (Figma 13, 418 · 10×10) */
+.minusItem {
+  position: absolute;
+  top: -12px;
+  left: 0;
+}
+
+.minus {
+  display: block;
+  width: 10px;
+  height: 10px;
+  color: var(--color-muted);
+  transition: color 0.15s;
+}
+
+.minus svg {
+  display: block;
+}
+
+.minus:hover,
+.minus[aria-pressed='true'] {
+  color: var(--color-text);
+}
+
+/* 지울 카테고리를 고르는 중: 마우스를 올린 이름에 취소선 */
+.categories[data-removing] :is(.category, .categoryActive):not([aria-label='카테고리 추가']):hover {
+  color: var(--color-text);
+  text-decoration: line-through;
+}
+
 /* "+" 대신 나타나는 이름 입력칸: 목록 글자와 같은 크기 */
 .categoryInput {
   display: block;

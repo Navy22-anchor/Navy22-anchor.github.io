@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import DateTime from '../components/DateTime.jsx';
 import DynamicIsland from '../components/DynamicIsland.jsx';
 import ProjectStrip from '../components/ProjectStrip.jsx';
-import { addCategory, loadCategories } from '../data/categories.js';
+import { addCategory, loadCategories, removeCategory } from '../data/categories.js';
 import { loadRows } from '../data/projects.js';
 import braceLeft from '../assets/brace-left.svg';
 import braceRight from '../assets/brace-right.svg';
@@ -20,6 +21,8 @@ export default function Landing() {
   const [categories, setCategories] = useState(loadCategories);
   const [category, setCategory] = useState(categories[0]);
   const [adding, setAdding] = useState(false); // "+"를 눌러 새 카테고리 이름을 입력하는 중
+  const [removing, setRemoving] = useState(false); // "−"를 눌러 지울 카테고리를 고르는 중
+  const [confirming, setConfirming] = useState(null); // "삭제 하겠습니까?" 카드에 띄운 카테고리
   const [activeRow, setActiveRow] = useState(initialRow);
   // 줄마다 지금 가운데에 있는 콘텐츠 번호를 기억
   const [indexes, setIndexes] = useState({});
@@ -33,6 +36,28 @@ export default function Landing() {
     const i = rows.findIndex((row) => row.category === name);
     if (i !== -1) stripRef.current?.goTo(i);
   };
+  // 삭제 모드에서 카테고리를 누르면 확인 카드부터
+  const onCategoryClick = (name) => {
+    if (removing) setConfirming(name);
+    else goToCategory(name);
+  };
+
+  const confirmRemove = () => {
+    removeCategory(confirming);
+    const next = loadCategories();
+    setCategories(next);
+    setConfirming(null);
+    if (next.length === 0) setRemoving(false);
+  };
+
+  // 삭제 고르기는 Esc로 끝냄 (확인 카드가 떠 있을 때 Esc는 카드만 닫음)
+  useEffect(() => {
+    if (!removing || confirming) return;
+    const onKey = (e) => e.key === 'Escape' && setRemoving(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [removing, confirming]);
+
   // 스크롤로 줄이 바뀌면 카테고리 선택 표시도 따라감
   useEffect(() => {
     setCategory(active.category);
@@ -99,14 +124,32 @@ export default function Landing() {
         <a href="#/write" className={`${styles.plainLink} ${styles.writeNav}`}>글쓰기</a>
       </header>
 
-      <ul className={styles.categories} aria-label="카테고리">
+      <ul className={styles.categories} aria-label="카테고리" data-removing={removing || undefined}>
+        {/* Figma "minus" (157:1609): 목록 바로 위. 누르면 지울 카테고리를 고르는 상태 */}
+        <li className={styles.minusItem}>
+          <button
+            type="button"
+            className={styles.minus}
+            aria-label={removing ? '카테고리 삭제 끝내기' : '카테고리 삭제'}
+            aria-pressed={removing}
+            onClick={() => {
+              setAdding(false);
+              setRemoving((r) => !r);
+            }}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+              <path d="M0 5H10" stroke="currentColor" strokeWidth="1.4" />
+            </svg>
+          </button>
+        </li>
         {categories.map((name) => (
           <li key={name}>
             <button
               type="button"
               className={name === category ? styles.categoryActive : styles.category}
-              aria-pressed={name === category}
-              onClick={() => goToCategory(name)}
+              aria-pressed={removing ? undefined : name === category}
+              aria-label={removing ? `${name} 삭제` : undefined}
+              onClick={() => onCategoryClick(name)}
             >
               {name}
             </button>
@@ -133,12 +176,22 @@ export default function Landing() {
               onBlur={() => setAdding(false)}
             />
           ) : (
-            <button type="button" className={styles.category} aria-label="카테고리 추가" onClick={() => setAdding(true)}>
+            <button
+              type="button"
+              className={styles.category}
+              aria-label="카테고리 추가"
+              onClick={() => {
+                setRemoving(false);
+                setAdding(true);
+              }}
+            >
               +
             </button>
           )}
         </li>
       </ul>
+
+      {confirming && <ConfirmDialog onConfirm={confirmRemove} onClose={() => setConfirming(null)} />}
 
       <div className={styles.focus}>
         <p className={styles.tags} aria-live="polite">{active.category}</p>
