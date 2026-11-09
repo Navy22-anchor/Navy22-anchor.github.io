@@ -270,6 +270,7 @@
 }
 
 .controls {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -304,8 +305,179 @@
   cursor: default;
 }
 
+/* ── 검색 (Figma "Island search expanded" 130:959) ── */
+
+/* 검색 중에는 검색창이 아일랜드 아래로 튀어나오도록 자르지 않음 */
+.shell[data-searching] {
+  overflow: visible;
+}
+
+/* 1. 재생 버튼들이 돋보기에서 가까운 것부터 작아지며 사라짐 */
+.playControls > button {
+  transition:
+    transform 0.2s ease-out 0.2s,
+    opacity 0.2s ease-out 0.2s;
+}
+
+.shell[data-searching] .playControls > button {
+  transform: scale(0);
+  opacity: 0;
+  transition:
+    transform 0.2s ease-in var(--hide-delay, 0s),
+    opacity 0.16s ease-in calc(var(--hide-delay, 0s) + 0.04s);
+}
+
+.shell[data-searching] .playControls > button:nth-child(3) { --hide-delay: 0s; }
+.shell[data-searching] .playControls > button:nth-child(2) { --hide-delay: 0.04s; }
+.shell[data-searching] .playControls > button:nth-child(1) { --hide-delay: 0.08s; }
+
+/* 2. 검색창: 오른쪽 끝(돋보기 자리)은 고정, 폭 30 → 295로 왼쪽으로 펼쳐짐 */
+.searchField {
+  position: absolute;
+  top: 7px;
+  right: 28px; /* 아일랜드 x 331 */
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  border-radius: 15px;
+  overflow: hidden;
+  background: #2c2c2c; /* 재생바 바탕(#3f3f3f 70%)을 검은 아일랜드 위에 올린 색 */
+  opacity: 0;
+  transition:
+    width 0.3s ease-in-out,
+    height 0.3s ease-in-out,
+    border-radius 0.3s ease-in-out,
+    opacity 0.15s ease-out 0.15s;
+}
+
+.shell[data-searching] .searchField {
+  width: 295px;
+  border-radius: 18px;
+  opacity: 1;
+  box-shadow: 0 8px 16px rgb(0 0 0 / 0.25);
+  transition:
+    width 0.6s cubic-bezier(0.25, 0.1, 0.25, 1) 0.25s,
+    height 0.45s cubic-bezier(0.25, 0.1, 0.25, 1),
+    border-radius 0.45s cubic-bezier(0.25, 0.1, 0.25, 1),
+    opacity 0.08s ease-out 0.25s;
+}
+
+/* 펼치기 전(폭 30)에는 결과가 없어 알약 모양 */
+.shell[data-searching] .searchField:not(:has(.results)) {
+  border-radius: 15px;
+}
+
+.searchInput {
+  display: block;
+  width: 295px;
+  height: 30px;
+  padding: 0 44px 0 18px; /* 오른쪽은 돋보기 자리 */
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--color-white);
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: -0.3px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.shell[data-searching] .searchInput {
+  opacity: 1;
+  transition: opacity 0.2s ease-out 0.6s;
+}
+
+.searchInput::placeholder {
+  color: #9a9a9a;
+}
+
+.searchInput::-webkit-search-cancel-button {
+  display: none;
+}
+
+/* 결과: 위·사이·아래 간격 21로 같게, 최대 5개 */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 21px;
+  width: 295px;
+  margin: 0;
+  padding: 21px 0 0;
+  list-style: none;
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  height: 53px;
+  padding: 0 15px 0 14px; /* 재생·일시정지 아이콘이 Figma 위치(x 278.6, 300.6)에 오게 */
+}
+
+.resultText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.resultTitle {
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: -0.408px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.resultText .artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resultControls {
+  flex: none;
+  display: flex;
+  gap: 2px;
+}
+
+.resultControls button {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  transition: opacity 0.15s;
+}
+
+.resultControls button:hover:not(:disabled) {
+  opacity: 0.7;
+}
+
+.resultControls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* 돋보기: 검색창 위에 그대로. 펼쳐질 때 살짝 눌렸다 돌아옴 */
+.searchButton {
+  position: relative;
+  z-index: 2;
+  width: 24px;
+}
+
+.shell[data-searching] .searchButton {
+  animation: press 0.35s ease-out;
+}
+
+@keyframes press {
+  30% { transform: scale(0.8); }
+  100% { transform: scale(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .root :is(.shell, .island, .expanded) {
+  .root :is(.shell, .island, .expanded, .searchField, .searchInput, .playControls > button) {
     transition: none !important;
   }
 }
