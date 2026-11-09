@@ -388,10 +388,6 @@
   transition: opacity 0.2s ease-out 0.6s;
 }
 
-.searchInput::placeholder {
-  color: #9a9a9a;
-}
-
 .searchInput::-webkit-search-cancel-button {
   display: none;
 }

@@ -24,8 +24,19 @@ export default function Landing() {
   // 줄마다 지금 가운데에 있는 콘텐츠 번호를 기억
   const [indexes, setIndexes] = useState({});
 
-  // 카테고리별 페이지는 아직 없어서 선택 표시만 바꿉니다.
+  const stripRef = useRef(null);
   const active = rows[activeRow] ?? rows[0];
+
+  // 카테고리를 누르면 그 콘텐츠 줄을 중괄호 사이로 가져옴 (아직 콘텐츠가 없는 카테고리는 선택 표시만)
+  const goToCategory = (name) => {
+    setCategory(name);
+    const i = rows.findIndex((row) => row.category === name);
+    if (i !== -1) stripRef.current?.goTo(i);
+  };
+  // 스크롤로 줄이 바뀌면 카테고리 선택 표시도 따라감
+  useEffect(() => {
+    setCategory(active.category);
+  }, [active.category]);
   const indexFor = useCallback((row) => indexes[row.id] ?? startIndex(row), [indexes]);
   const itemIndex = indexFor(active);
   const item = active.items[itemIndex];
@@ -95,7 +106,7 @@ export default function Landing() {
               type="button"
               className={name === category ? styles.categoryActive : styles.category}
               aria-pressed={name === category}
-              onClick={() => setCategory(name)}
+              onClick={() => goToCategory(name)}
             >
               {name}
             </button>
@@ -141,6 +152,7 @@ export default function Landing() {
 
       <main className={styles.main}>
         <ProjectStrip
+          ref={stripRef}
           rows={rows}
           initialRow={initialRow}
           indexFor={indexFor}

@@ -95,7 +95,11 @@ export default function DynamicIsland({
   // 지금 재생기에 올라간 곡. 검색 결과를 재생하면 바뀜
   const [track, setTrack] = useState({ id: trackId, title, artist, artwork: '', previewUrl: '' });
   const [searching, setSearching] = useState(false);
+  const [pinned, setPinned] = useState(false); // 검색창을 클릭해 고정했는지
   const [query, setQuery] = useState('');
+  const fieldRef = useRef(null);
+  const buttonRef = useRef(null);
+
   const [results, setResults] = useState([]);
 
   // 미리듣기 주소를 받아 오디오를 준비. 30초가 끝나면 처음부터 반복
@@ -166,31 +170,31 @@ export default function DynamicIsland({
     };
   }, [query]);
 
-  // 돋보기에 마우스를 올리면(또는 포커스·클릭) 검색창이 펼쳐짐. 다 펼쳐질 즈음 바로 입력할 수 있게 포커스
-  const openSearch = () => {
-    if (searching) return;
-    setSearching(true);
-    setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 450);
-  };
+  // 돋보기에 마우스를 올리면 검색창이 펼쳐지고, 돋보기·검색창에서 마우스가 나가면 다시 접힘
+  // 검색창을 클릭하면(포커스) 고정: 마우스가 나가도 그대로, Esc나 아일랜드 밖을 누르면 닫힘
+  const openSearch = () => setSearching(true);
   const closeSearch = () => {
     setSearching(false);
+    setPinned(false);
     setQuery('');
     setResults([]);
   };
-  // 아일랜드가 접힐 때(마우스도 포커스도 밖으로) 검색도 닫음
-  // 아무것도 입력하지 않았으면 마우스가 나갈 때 닫고, 입력 중이면 포커스가 남아 있는 동안 그대로 둠
-  const onLeave = () => {
-    if (!searching) return;
-    const inside = rootRef.current?.contains(document.activeElement);
-    if (inside && query.trim()) return;
-    if (inside) document.activeElement.blur();
-    closeSearch();
+  const pinSearch = () => {
+    setSearching(true);
+    setPinned(true);
+  };
+  // 돋보기 ↔ 검색창 사이를 옮겨 갈 때는 닫지 않음
+  const onSearchLeave = () => {
+    if (pinned) return;
+    setTimeout(() => {
+      if (![fieldRef.current, buttonRef.current].some((el) => el?.matches(':hover'))) closeSearch();
+    }, 60);
   };
   const onBlur = () => {
     // 다른 창으로 전환해 포커스가 사라진 경우는 그대로 둠 (돌아오면 이어서 검색)
     setTimeout(() => {
       if (!document.hasFocus()) return;
-      if (!rootRef.current?.contains(document.activeElement) && !rootRef.current?.matches(':hover')) closeSearch();
+      if (!rootRef.current?.contains(document.activeElement)) closeSearch();
     });
   };
 
@@ -227,7 +231,7 @@ export default function DynamicIsland({
   );
 
   return (
-    <div className={styles.root} ref={rootRef} onMouseLeave={onLeave} onBlur={onBlur}>
+    <div className={styles.root} ref={rootRef} onBlur={onBlur}>
       <div className={styles.shell} data-searching={searching || undefined}>
         <button
           type="button"
@@ -285,7 +289,10 @@ export default function DynamicIsland({
             </div>
             {/* 검색창: 돋보기 자리에서 왼쪽으로 펼쳐지고, 결과가 생기면 아래로 늘어남 (아일랜드 크기는 그대로) */}
             <div
+              ref={fieldRef}
               className={styles.searchField}
+              onMouseLeave={onSearchLeave}
+              onMouseDown={pinSearch}
               style={{ height: results.length ? FIELD_HEIGHT + results.length * (ROW_HEIGHT + ROW_GAP) + ROW_GAP : FIELD_HEIGHT }}
               inert={!searching}
             >
@@ -294,8 +301,8 @@ export default function DynamicIsland({
                 className={styles.searchInput}
                 type="search"
                 value={query}
-                placeholder="노래 검색"
                 aria-label="노래 검색"
+                onFocus={pinSearch}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key !== 'Escape') return;
@@ -335,9 +342,15 @@ export default function DynamicIsland({
               className={styles.searchButton}
               aria-label="노래 검색 열기"
               aria-expanded={searching}
+              ref={buttonRef}
               onMouseEnter={openSearch}
+              onMouseLeave={onSearchLeave}
               onFocus={openSearch}
-              onClick={() => (searching ? inputRef.current?.focus() : openSearch())}
+              onClick={() => {
+                // 터치·클릭: 바로 고정하고 입력할 수 있게
+                pinSearch();
+                setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 450);
+              }}
             >
               <Icon name="search" size={15} />
             </button>

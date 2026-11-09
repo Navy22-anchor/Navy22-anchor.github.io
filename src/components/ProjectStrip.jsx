@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import RowCarousel, { centerSize } from './RowCarousel.jsx';
 import styles from './ProjectStrip.module.css';
 
@@ -23,7 +23,7 @@ function readViewport() {
 // 중괄호와 가운데 콘텐츠 사이 거리 (Figma: 글 카드 369, 책 258)
 const braceOffset = (w) => Math.max(w / 2 + 49, 258);
 
-export default function ProjectStrip({ rows, initialRow = 0, indexFor, onActiveChange, onChangeItem, onOpen }) {
+export default function ProjectStrip({ ref, rows, initialRow = 0, indexFor, onActiveChange, onChangeItem, onOpen }) {
   const n = rows.length;
   const [pos, setPos] = useState(initialRow);
   const [viewport, setViewport] = useState(readViewport);
@@ -75,6 +75,20 @@ export default function ProjectStrip({ rows, initialRow = 0, indexFor, onActiveC
       settleTimer.current = setTimeout(() => animateTo(Math.round(posRef.current)), SETTLE_DELAY);
     },
     [distance, animateTo],
+  );
+
+  // 바깥(카테고리 목록)에서 줄 번호로 이동: 끝없이 반복되므로 지금 자리에서 가까운 쪽으로
+  useImperativeHandle(
+    ref,
+    () => ({
+      goTo(index) {
+        const current = Math.round(posRef.current);
+        let delta = mod(index - current, n);
+        if (delta > n / 2) delta -= n;
+        animateTo(current + delta);
+      },
+    }),
+    [n, animateTo],
   );
 
   const activeIndex = mod(Math.round(pos), n);
