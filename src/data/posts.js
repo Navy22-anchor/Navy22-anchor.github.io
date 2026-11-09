@@ -43,8 +43,23 @@ export const posts = [
   },
 ];
 
-// 저장소 글(content/posts/*.md) → 이 브라우저에서 방금 발행한 글 → 예시 글 순서로 찾음
+// 이 브라우저에서 방금 발행·수정한 글 → 저장소 글(content/posts/*.md) → 예시 글 순서로 찾음
 export function findPost(id) {
   const byId = (post) => post.id === id;
-  return repoPosts.find(byId) ?? loadLocalPosts().find(byId) ?? posts.find(byId) ?? repoPosts[0] ?? posts[0];
+  return loadLocalPosts().find(byId) ?? repoPosts.find(byId) ?? posts.find(byId) ?? repoPosts[0] ?? posts[0];
+}
+
+// 저장소에 올라간 글인지 (삭제할 때 GitHub에서도 지워야 함)
+export const isRepoPost = (id) => repoPosts.some((post) => post.id === id);
+
+// 예시 글(블록 목록)을 수정 화면에 띄울 수 있게 마크다운으로
+export function toMarkdown(post) {
+  if (post.markdown !== undefined) return post.markdown;
+  return (post.body ?? [])
+    .map((block) => {
+      if (block.type === 'h2') return `## ${block.text}`;
+      if (block.type === 'image') return `![${block.caption ?? ''}](${block.src ?? ''})`;
+      return block.text;
+    })
+    .join('\n\n');
 }

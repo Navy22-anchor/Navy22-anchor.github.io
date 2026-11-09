@@ -65,7 +65,7 @@ async function request(token, path, options = {}) {
     throw new PublishError('GitHub에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.');
   }
   if (res.status === 401) throw new PublishError('토큰이 올바르지 않거나 만료되었습니다.', { badToken: true });
-  if (res.status === 403 || (res.status === 404 && options.method === 'PUT')) {
+  if (res.status === 403 || (res.status === 404 && options.method)) {
     throw new PublishError('이 저장소에 글을 쓸 권한이 없습니다. 저장소 Contents 쓰기 권한이 있는 토큰인지 확인해 주세요.', {
       badToken: true,
     });
@@ -95,4 +95,23 @@ export async function commitPost(token, { id, title }, text) {
     throw new PublishError(`발행하지 못했습니다. (${res.status} ${detail.message ?? ''})`.trim());
   }
   return res.json();
+}
+
+// 삭제: 저장소의 content/posts/<id>.md 를 지우는 커밋. 파일이 없으면(아직 안 올린 글) false
+export async function deletePost(token, { id, title }) {
+  const path = `content/posts/${encodeURIComponent(id)}.md`;
+  const existing = await request(token, `${path}?ref=${BRANCH}`);
+  if (!existing.ok) return false;
+  const { sha } = await existing.json();
+
+  const res = await request(token, path, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: `Post : delete ${title || id}`, sha, branch: BRANCH }),
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}));
+    throw new PublishError(`삭제하지 못했습니다. (${res.status} ${detail.message ?? ''})`.trim());
+  }
+  return true;
 }

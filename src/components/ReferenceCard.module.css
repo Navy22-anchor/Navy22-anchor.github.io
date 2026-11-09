@@ -33,7 +33,6 @@
 .label {
   flex: none;
   width: 60px;
-  color: var(--color-secondary);
   font-weight: 500;
 }
 

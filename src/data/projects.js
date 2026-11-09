@@ -3,7 +3,7 @@ import bookCenter from '../assets/work-book.jpg';
 import bookRight from '../assets/book-right.jpg';
 import workNight from '../assets/work-night.jpg';
 import workWhisky from '../assets/work-whisky.jpg';
-import { loadLocalPosts } from './localPosts.js';
+import { loadDeletedIds, loadLocalPosts } from './localPosts.js';
 import { excerptOf, repoPosts } from './repoPosts.js';
 
 // 세로로 쌓이는 줄(작업). 줄마다 가로로 넘기는 콘텐츠(items)가 있고,
@@ -11,17 +11,18 @@ import { excerptOf, repoPosts } from './repoPosts.js';
 // kind: 'posts' → 가로형 글 카드 / 'images' → 사진·책 표지 (w·h는 Figma 크기)
 
 // AI 줄에는 category가 AI인 글이 최신순으로 들어갑니다.
-// 저장소의 글(content/posts/*.md)에, 이 브라우저에서 발행했지만 아직 저장소에 올리지 않은 글을 더함
+// 저장소의 글(content/posts/*.md)에, 이 브라우저에서 발행·수정했지만 아직 다시 빌드되지 않은 글을 덮어씀
 function loadPosts(category) {
-  const repoIds = new Set(repoPosts.map((post) => post.id));
+  const deleted = new Set(loadDeletedIds());
   const local = loadLocalPosts()
-    .filter((post) => !repoIds.has(post.id))
+    .filter((post) => !deleted.has(post.id))
     .map((post) => ({
       ...post,
       excerpt: excerptOf(post.markdown ?? ''),
       thumbnail: /!\[[^\]]*\]\(\s*([^)\s]+)/.exec(post.markdown ?? '')?.[1] ?? null,
     }));
-  return [...repoPosts, ...local]
+  const localIds = new Set(local.map((post) => post.id));
+  return [...repoPosts.filter((post) => !localIds.has(post.id) && !deleted.has(post.id)), ...local]
     .filter((post) => post.category === category)
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
     .map(({ id, title, date, excerpt, thumbnail }) => ({ id, title, date: date.slice(0, 10), excerpt, thumbnail }));

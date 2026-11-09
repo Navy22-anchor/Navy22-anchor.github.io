@@ -4,6 +4,7 @@
   --post-muted: var(--color-secondary);
   --post-placeholder: var(--color-placeholder);
   --post-pill: var(--color-fill);
+  --post-danger: #ff0909;
   --font-post: 'Inter', 'Noto Sans KR', sans-serif;
   --font-post-body: 'Noto Sans KR', sans-serif;
 
@@ -28,33 +29,32 @@
   padding: 20px 32px;
 }
 
-.headerLeft {
+/* 양옆 묶음을 같은 너비(64)로 두어 가운데 알약이 항상 정가운데 */
+.headerSide {
   display: flex;
   gap: 16px;
+  width: 64px;
 }
 
-.back {
+.headerRight {
+  justify-content: flex-end;
+}
+
+.iconButton {
   display: block;
   width: 24px;
   height: 24px;
   border-radius: 6px;
 }
 
-.back img {
+.iconButton img {
   display: block;
   filter: var(--color-icon-filter);
 }
 
-.back:hover {
-  background: var(--post-placeholder);
-}
-
-.icon {
-  display: block;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: var(--post-placeholder);
+.iconButton:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
 .pill {
@@ -66,6 +66,72 @@
   line-height: 1.5;
   text-decoration: none;
   white-space: nowrap;
+}
+
+/* ── 삭제 확인 창 (Figma "Delete confirm dialog") ── */
+.dialog {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: min(400px, calc(100vw - 32px));
+  padding: 32px 28px 28px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-post);
+  box-shadow:
+    0 4px 8px rgb(0 0 0 / 0.08),
+    0 16px 40px rgb(0 0 0 / 0.16);
+}
+
+.dialog:not([open]) {
+  display: none;
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 0.3);
+}
+
+.dialogHeading {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.dialogError {
+  margin: 0;
+  color: var(--color-error);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.dialogActions {
+  display: flex;
+  gap: 8px;
+}
+
+.dialogButton {
+  padding: 8px 20px;
+  border-radius: 999px;
+  background: var(--post-pill);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.danger {
+  background: var(--post-danger);
+  color: var(--color-white);
+}
+
+.dialogButton:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* ── 본문: 가운데 680 열, 오른쪽에 참고문헌 ── */
@@ -137,7 +203,6 @@
 }
 
 .caption {
-  color: var(--post-muted);
   font-family: var(--font-post-body);
   font-size: 14px;
   line-height: 1.5;
@@ -157,7 +222,6 @@
 }
 
 .question {
-  color: var(--post-muted);
   font-size: inherit;
   font-weight: 600;
   line-height: 1.5;
