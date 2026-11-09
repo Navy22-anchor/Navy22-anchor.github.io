@@ -210,6 +210,7 @@
 }
 
 .titleField {
+  padding: 0; /* textarea 기본 여백이 없어야 미리보기 제목과 글자 줄이 맞음 */
   overflow: hidden;
   font-size: 36px;
   font-weight: 700;
@@ -314,13 +315,18 @@
   gap: 24px;
   min-width: 0;
   max-height: calc(100vh - 77px);
-  padding: 22px 40px 40px; /* 미리보기 제목을 왼쪽 글 제목과 같은 높이에 */
+  /* 두 칸 위 여백(32)까지 올라와 "미리보기" 글자를 그 안에 두고, 제목은 왼쪽 글 제목과 같은 줄에 */
+  margin-top: -32px;
+  padding: 32px 40px 40px;
   border-radius: 16px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
 .previewLabel {
+  position: absolute;
+  top: 8px;
+  left: 40px;
   color: var(--write-muted);
   font-size: 12px;
   font-weight: 600;
@@ -411,9 +417,14 @@
   .preview {
     position: static;
     max-height: none;
+    margin-top: 0;
     padding: 40px 0;
     border-top: 1px solid var(--write-placeholder);
     border-radius: 0;
+  }
+
+  .previewLabel {
+    position: static;
   }
 }
 

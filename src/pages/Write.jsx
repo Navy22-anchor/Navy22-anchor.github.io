@@ -63,13 +63,16 @@ function applyTool(tool, value, start, end) {
 }
 
 // 내용에 맞춰 높이가 늘어나는 textarea
+// 높이를 재려고 잠깐 줄이는 동안 페이지가 짧아져 스크롤이 맨 위로 튀지 않게 스크롤 위치를 되돌림
 function useAutosize(value) {
   const ref = useRef(null);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
+    const { scrollX, scrollY } = window;
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
+    if (window.scrollY !== scrollY) window.scrollTo(scrollX, scrollY);
   }, [value]);
   return ref;
 }
@@ -585,7 +588,6 @@ export default function Write({ editId }) {
             ref={titleRef}
             className={styles.titleField}
             rows={1}
-            placeholder="글 제목을 입력하세요"
             aria-label="글 제목"
             value={draft.title}
             onChange={(e) => update({ title: e.target.value.replace(/\n/g, ' ') })}
