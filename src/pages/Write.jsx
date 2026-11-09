@@ -76,6 +76,131 @@ function useAutosize(value) {
 
 const emptyReference = { title: '', author: '', year: '', url: '', about: '' };
 
+// Figma "Motion / Scrollbar → Toolbar": 두 칸 사이의 스크롤바 막대에 마우스를 올리면 세로 도구모음으로 펼쳐짐
+// 버튼마다 배경이 자기 자리까지 자란 뒤 커지기 시작하고, 모두 배경과 같은 순간(0.25초)에 제 크기가 됨
+const TOOL_DELAYS = [0, 0, 0, 0, 0, 0, 0.017, 0.036, 0.06, 0.116, 0.116];
+const RAIL_TOP = 85; // 접힌 막대가 스크롤 맨 위일 때 위치 (상단 바 77 + 8)
+const THUMB_HEIGHT = 260;
+const OPEN_TOP = 109; // 펼친 도구모음의 가장 높은 위치 (왼쪽 편집 칸 윗선)
+const OPEN_HEIGHT = 372;
+const EDGE = 8; // 화면 아래 여백, 막대 양옆 마우스 여유
+
+function ToolRail({ tools, onTool, onReference }) {
+  const ref = useRef(null);
+  const thumbY = useRef(0);
+  const [open, setOpen] = useState(false);
+  const [animating, setAnimating] = useState(false);
+  const animTimer = useRef(0);
+
+  // 접힌 막대는 글 스크롤 위치를 따라 움직임 (펼치고 접는 동안에만 위치가 부드럽게 이동)
+  useEffect(() => {
+    const update = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const track = Math.max(0, window.innerHeight - EDGE - RAIL_TOP - THUMB_HEIGHT);
+      thumbY.current = max > 0 ? (window.scrollY / max) * track : 0;
+      ref.current?.style.setProperty('--thumb-y', `${thumbY.current}px`);
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    const observer = new ResizeObserver(update);
+    observer.observe(document.body);
+    return () => {
+      window.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+      observer.disconnect();
+    };
+  }, []);
+  useEffect(() => () => clearTimeout(animTimer.current), []);
+
+  const toggle = useCallback((next) => {
+    setOpen(next);
+    setAnimating(true);
+    clearTimeout(animTimer.current);
+    animTimer.current = setTimeout(() => setAnimating(false), 260);
+  }, []);
+
+  // 막대가 있는 자리에서 펼침: 막대 가운데에 맞추되 화면 안(편집 칸 윗선 ~ 화면 아래)으로
+  const expand = () => {
+    if (open) return;
+    const center = RAIL_TOP + thumbY.current + THUMB_HEIGHT / 2;
+    const top = Math.max(OPEN_TOP, Math.min(center - OPEN_HEIGHT / 2, window.innerHeight - EDGE - OPEN_HEIGHT));
+    ref.current.style.setProperty('--open-top', `${top}px`);
+    toggle(true);
+  };
+
+  // 마우스가 도구모음과 원래 막대 자리 모두에서 벗어나야 접음 (펼친 자리와 막대 자리가 어긋나도 깜빡이지 않게)
+  useEffect(() => {
+    if (!open) return;
+    const inside = (x, y) => {
+      const r = ref.current.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const top = RAIL_TOP + thumbY.current;
+      const inRail = x >= r.left - EDGE && x <= r.right + EDGE && y >= r.top && y <= r.bottom;
+      const inThumb = Math.abs(x - cx) <= 4 + EDGE && y >= top && y <= top + THUMB_HEIGHT;
+      return inRail || inThumb;
+    };
+    const onMove = (e) => {
+      if (inside(e.clientX, e.clientY)) return;
+      if (ref.current.querySelector(':focus-visible')) return; // 키보드로 쓰는 중
+      toggle(false);
+    };
+    const onOut = (e) => !e.relatedTarget && toggle(false); // 창 밖으로 나감
+    window.addEventListener('pointermove', onMove);
+    document.addEventListener('mouseout', onOut);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      document.removeEventListener('mouseout', onOut);
+    };
+  }, [open, toggle]);
+
+  return (
+    <div
+      ref={ref}
+      className={styles.rail}
+      data-open={open || undefined}
+      data-animating={animating || undefined}
+      role="toolbar"
+      aria-label="서식"
+      aria-orientation="vertical"
+      onMouseEnter={expand}
+      // 키보드(Tab)로 들어오면 펼침
+      onFocus={(e) => e.target.matches(':focus-visible') && expand()}
+      onBlur={(e) => !ref.current.contains(e.relatedTarget) && !ref.current.matches(':hover') && toggle(false)}
+    >
+      <div className={styles.tools}>
+        {tools.map((tool, i) => (
+          <button
+            key={tool.id}
+            type="button"
+            className={styles.tool}
+            data-tool={tool.id}
+            title={tool.label}
+            aria-label={tool.label}
+            style={{ '--tool-delay': `${TOOL_DELAYS[i]}s` }}
+            onMouseDown={(e) => e.preventDefault()} // 선택 범위를 잃지 않게
+            onClick={() => onTool(tool)}
+          >
+            {tool.icon}
+          </button>
+        ))}
+        <button
+          type="button"
+          className={styles.tool}
+          data-tool="reference"
+          title="참고문헌 추가"
+          aria-label="참고문헌 추가"
+          style={{ '--tool-delay': `${TOOL_DELAYS[tools.length]}s` }}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onReference}
+        >
+          [1]
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // 브라우저에서 파일 내려받기
 function download(filename, text) {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
@@ -450,32 +575,11 @@ export default function Write({ editId }) {
 
       <div className={styles.split}>
         <section className={styles.editor} aria-label="마크다운 작성">
-          <div className={styles.toolbar} role="toolbar" aria-label="서식">
-            {TOOLS.map((tool) => (
-              <button
-                key={tool.id}
-                type="button"
-                className={styles.tool}
-                data-tool={tool.id}
-                title={tool.label}
-                aria-label={tool.label}
-                onMouseDown={(e) => e.preventDefault()} // 선택 범위를 잃지 않게
-                onClick={() => runTool(tool)}
-              >
-                {tool.icon}
-              </button>
-            ))}
-            <button
-              type="button"
-              className={styles.tool}
-              data-tool="reference"
-              title="참고문헌 추가"
-              aria-label="참고문헌 추가"
-              onClick={() => update({ references: [...draft.references, emptyReference] })}
-            >
-              [1]
-            </button>
-          </div>
+          <ToolRail
+            tools={TOOLS}
+            onTool={runTool}
+            onReference={() => update({ references: [...draft.references, emptyReference] })}
+          />
 
           <textarea
             ref={titleRef}

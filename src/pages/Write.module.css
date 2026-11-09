@@ -5,6 +5,7 @@
   --write-placeholder: var(--color-placeholder);
   --write-surface: var(--color-fill);
   --write-accent: var(--color-accent);
+  --write-scrollbar: rgb(0 0 0 / 0.3);
 
   min-height: 100vh;
   color: var(--color-text);
@@ -94,16 +95,79 @@
   min-width: 0;
 }
 
-.toolbar {
-  position: sticky;
-  top: 77px;
+/* 서식 도구: 두 칸 사이 스크롤바 막대 → 마우스를 올리면 세로 도구모음 (Figma "Motion / Scrollbar → Toolbar") */
+.rail {
+  --rail-ease: cubic-bezier(0.2, 0, 0, 1);
+  --rail-duration: 0.25s;
+
+  position: fixed;
+  top: calc(85px + var(--thumb-y, 0px));
+  left: calc(50% - 4px);
+  z-index: 2;
+  width: 8px;
+  height: 260px;
+  border-radius: 4px;
+  background: var(--write-scrollbar);
+  transition:
+    width var(--rail-duration) var(--rail-ease),
+    height var(--rail-duration) var(--rail-ease),
+    left var(--rail-duration) var(--rail-ease),
+    border-radius var(--rail-duration) var(--rail-ease);
+}
+
+/* 펼치고 접는 동안에만 위치도 부드럽게 (평소에는 스크롤을 바로 따라감) */
+.rail[data-animating] {
+  transition-property: width, height, left, border-radius, top;
+}
+
+/* 가는 막대도 잡기 쉽게 양옆 8px 여유 */
+.rail::after {
+  content: '';
+  position: absolute;
+  inset: 0 -8px;
+}
+
+.rail[data-open] {
+  top: var(--open-top, 109px); /* 막대 자리에서 펼침, 가장 높게는 왼쪽 편집 칸 윗선 */
+  left: calc(50% - 20px);
+  width: 40px;
+  height: 372px;
+  border-radius: 12px;
+}
+
+.tools {
+  position: absolute;
+  top: 0;
+  left: 50%;
   z-index: 1;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 12px;
-  padding: 8px 12px;
-  border-radius: 12px;
-  background: var(--write-surface);
+  padding: 12px 8px;
+  translate: -50% 0;
+}
+
+.rail:not([data-open]) .tools {
+  pointer-events: none;
+}
+
+.rail .tool {
+  scale: 0;
+  transition: scale 0.12s var(--rail-ease);
+}
+
+/* 모든 버튼이 배경과 같은 순간에 제 크기가 되도록: 늦게 시작하는 만큼 짧게 */
+.rail[data-open] .tool {
+  scale: 1;
+  transition: scale calc(var(--rail-duration) - var(--tool-delay)) var(--rail-ease) var(--tool-delay);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail,
+  .rail .tool,
+  .rail[data-open] .tool {
+    transition: none;
+  }
 }
 
 .tool {
@@ -306,8 +370,40 @@
   gap: 16px;
 }
 
-/* 좁은 화면: 원본 아래에 미리보기 */
+/* 좁은 화면: 원본 아래에 미리보기, 도구는 예전처럼 가로 막대 */
 @media (max-width: 1000px) {
+  .rail,
+  .rail[data-open] {
+    position: sticky;
+    top: 77px;
+    left: auto;
+    width: auto;
+    height: auto;
+    border-radius: 12px;
+    background: var(--write-surface);
+    transition: none;
+  }
+
+  .rail::after {
+    content: none;
+  }
+
+  .tools,
+  .rail:not([data-open]) .tools {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    translate: none;
+    pointer-events: auto;
+  }
+
+  .rail .tool,
+  .rail[data-open] .tool {
+    scale: 1;
+    transition: none;
+  }
+
   .split {
     grid-template-columns: minmax(0, 680px);
   }
@@ -520,4 +616,10 @@
 .dialogButton:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+@media (prefers-color-scheme: dark) {
+  .page {
+    --write-scrollbar: rgb(255 255 255 / 0.3);
+  }
 }
