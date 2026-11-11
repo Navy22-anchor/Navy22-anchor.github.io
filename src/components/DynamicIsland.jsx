@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ScheduleCalendar } from './DateTime.jsx';
 import { SCHEDULE_GRACE, scheduleMarks, setSchedules, useSchedules } from './schedules.js';
 import styles from './DynamicIsland.module.css';
@@ -18,8 +18,11 @@ const ROW_GAP = 21;
 // 노래 예약은 schedules.js에 저장. 탭이 열려 있어야 그 시각에 재생됨
 const scheduleFormat = new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric', weekday: 'short', hour: 'numeric', minute: '2-digit' });
 
-// 흰 달력 위 1px 줄로도 보이게: 색상(H)·채도(S)는 두고 밝기(L)만 55% 이하로
-function readableColor(r, g, b) {
+// 바탕 위에서 잘 보이게: 색상(H)·채도(S)는 두고 밝기(L)만 [min, max] 안으로
+// 흰 달력의 1px 줄은 55% 이하, 검은 아일랜드의 파형은 60% 이상
+const ON_WHITE = [0, 0.55];
+const ON_BLACK = [0.6, 1];
+function readableColor(r, g, b, [minL, maxL]) {
   const [R, G, B] = [r, g, b].map((v) => v / 255);
   const max = Math.max(R, G, B);
   const min = Math.min(R, G, B);
@@ -32,12 +35,12 @@ function readableColor(r, g, b) {
     else if (max === G) h = (B - R) / d + 2;
     else h = (R - G) / d + 4;
   }
-  return `hsl(${Math.round(((h * 60) + 360) % 360)} ${Math.round(s * 100)}% ${Math.round(Math.min(l, 0.55) * 100)}%)`;
+  return `hsl(${Math.round(((h * 60) + 360) % 360)} ${Math.round(s * 100)}% ${Math.round(Math.min(maxL, Math.max(minL, l)) * 100)}%)`;
 }
 
 // 앨범 표지의 주요 색: 작게 줄여 그린 뒤, 회색·너무 밝거나 어두운 칸을 빼고 가장 많은 색 묶음의 평균
 // (Apple 이미지 서버가 CORS를 허용해서 픽셀을 읽을 수 있음. 못 읽으면 null → 기본 빨강)
-function useAlbumColor(src) {
+function useAlbumColor(src, lightness) {
   const [color, setColor] = useState(null);
   useEffect(() => {
     setColor(null);
@@ -70,12 +73,38 @@ function useAlbumColor(src) {
           buckets.set(key, bucket);
         }
         const best = [...buckets.values()].sort((x, y) => y.score - x.score)[0];
-        if (best) setColor(readableColor(best.r / best.count, best.g / best.count, best.b / best.count));
+        if (best) setColor(readableColor(best.r / best.count, best.g / best.count, best.b / best.count, lightness));
       })
       .catch(() => {}); // 못 읽으면 기본색
     return () => controller.abort();
   }, [src]);
   return color;
+}
+
+// 아티스트가 여러 명(쉼표·&·feat.·x로 이어짐)이면 이름 줄이 오른쪽에서 왼쪽으로 계속 흐름
+const MARQUEE_SPEED = 30; // px/s
+const MARQUEE_GAP = 32; // 끝과 다시 시작하는 앞 사이
+const multipleArtists = (artist = '') => /,|&|\bfeat\.?\s|\bft\.\s|\swith\s|\sx\s/i.test(artist);
+
+function Artist({ name }) {
+  const first = useRef(null);
+  const [duration, setDuration] = useState(0);
+  const scrolling = multipleArtists(name);
+
+  // 글자 폭에 맞춰 늘 같은 빠르기로
+  useLayoutEffect(() => {
+    if (scrolling) setDuration((first.current.offsetWidth + MARQUEE_GAP) / MARQUEE_SPEED);
+  }, [name, scrolling]);
+
+  if (!scrolling) return <span className={styles.artist}>{name}</span>;
+  return (
+    <span className={`${styles.artist} ${styles.marquee}`} aria-label={name}>
+      <span className={styles.marqueeTrack} style={{ '--marquee-gap': `${MARQUEE_GAP}px`, animationDuration: `${duration}s` }}>
+        <span ref={first} aria-hidden="true">{name}</span>
+        <span aria-hidden="true">{name}</span>
+      </span>
+    </span>
+  );
 }
 
 const formatTime = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -184,7 +213,8 @@ export default function DynamicIsland({
   const schedules = useSchedules();
   const [scheduling, setScheduling] = useState(null); // 달력을 연 곡 { track, top, button }
   const [wake, setWake] = useState(0);
-  const pickColor = useAlbumColor(scheduling?.track.artwork);
+  const pickColor = useAlbumColor(scheduling?.track.artwork, ON_WHITE);
+  const waveColor = useAlbumColor(track.artwork, ON_BLACK); // 지금 재생기에 올라간 곡
 
   // 미리듣기 주소를 받아 오디오를 준비. 30초가 끝나면 처음부터 반복
   useEffect(() => {
@@ -372,7 +402,7 @@ export default function DynamicIsland({
   );
 
   return (
-    <div className={styles.root} ref={rootRef} onBlur={onBlur}>
+    <div className={styles.root} ref={rootRef} onBlur={onBlur} style={waveColor ? { '--wave-color': waveColor } : undefined}>
       <div className={styles.shell} data-searching={searching || undefined}>
         <button
           type="button"
@@ -392,7 +422,7 @@ export default function DynamicIsland({
             <div className={styles.content}>
               <div className={styles.headline}>
                 <span className={styles.title}>{titleText}</span>
-                <span className={styles.artist}>{track.artist}</span>
+                <Artist name={track.artist} />
               </div>
               <Waveform playing={playing} />
             </div>
@@ -461,7 +491,7 @@ export default function DynamicIsland({
                         <Artwork className={styles.bigArtwork} src={r.artwork} size={53} />
                         <span className={styles.resultText}>
                           <span className={styles.resultTitle}>{r.title}</span>
-                          <span className={styles.artist}>{r.artist}</span>
+                          <Artist name={r.artist} />
                         </span>
                         <span className={styles.resultControls}>
                           <button

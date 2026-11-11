@@ -96,6 +96,12 @@
   text-align: left;
 }
 
+/* 작은 아일랜드: 제목은 표지와 파형 사이 가운데 */
+.island .title {
+  justify-content: center;
+  max-width: none; /* 남는 폭을 다 써야 가운데가 정확히 표지·파형 사이 가운데 */
+}
+
 .explicit {
   flex: none;
   display: inline-grid;
@@ -126,7 +132,8 @@
   width: 2px;
   height: 4px;
   border-radius: 1px;
-  background: #ff3b8d;
+  background: var(--wave-color, #ff3b8d); /* 지금 곡의 앨범 색. 받기 전에는 분홍 */
+  transition: background 0.3s;
 }
 
 .waveform i:nth-child(1) { height: 6px; }
@@ -227,6 +234,12 @@
 
 .headline .title {
   max-width: none;
+}
+
+/* 한 명이어도 이름이 길면 파형을 넘지 않게 말줄임 */
+.headline .artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .artist {
@@ -432,6 +445,49 @@
 .resultText .artist {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 아티스트가 여러 명: 같은 이름을 두 번 이어 붙여 왼쪽으로 한 벌만큼 흘리면 끊김 없이 반복.
+   양 끝은 살짝 흐리게 */
+.marquee {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: clip;
+  mask-image: linear-gradient(to right, transparent, #000 6px, #000 calc(100% - 12px), transparent);
+}
+
+.marqueeTrack {
+  display: inline-flex;
+  animation: marquee linear infinite;
+}
+
+.marqueeTrack > span {
+  flex: none;
+  padding-right: var(--marquee-gap);
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* 움직임을 줄이면 흐르지 않고 말줄임 */
+@media (prefers-reduced-motion: reduce) {
+  .marquee {
+    text-overflow: ellipsis;
+    mask-image: none;
+  }
+
+  .marqueeTrack {
+    display: inline;
+    animation: none;
+  }
+
+  .marqueeTrack > span + span {
+    display: none;
+  }
 }
 
 .resultControls {
