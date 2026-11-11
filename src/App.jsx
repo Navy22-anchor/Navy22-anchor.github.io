@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import Landing from './pages/Landing.jsx';
+import Login from './pages/Login.jsx';
 import Post from './pages/Post.jsx';
 import Write from './pages/Write.jsx';
 
@@ -18,7 +19,8 @@ export default function App() {
   const postMatch = path.match(/^\/post(?:\/([^/]+))?\/?$/);
   // #/write 새 글, #/write/<id> 기존 글 수정
   const writeMatch = path.match(/^\/write(?:\/([^/]+))?\/?$/);
-  const page = postMatch ? 'post' : writeMatch ? 'write' : 'home';
+  const loginMatch = /^\/login\/?$/.test(path);
+  const page = postMatch ? 'post' : writeMatch ? 'write' : loginMatch ? 'login' : 'home';
 
   useEffect(() => {
     document.documentElement.dataset.page = page;
@@ -26,6 +28,7 @@ export default function App() {
   }, [page, path]);
 
   if (postMatch) return <Post id={postMatch[1]} />;
+  if (loginMatch) return <Login />;
   if (writeMatch) return <Write key={path} editId={writeMatch[1]} />;
   return <Landing />;
 }
