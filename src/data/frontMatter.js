@@ -70,7 +70,7 @@ export function stringifyPost({ title, author, date, category, references = [], 
   if (references.length) {
     lines.push('references:');
     for (const ref of references) {
-      const keys = ['title', 'author', 'year', 'url', 'about'].filter((key) => ref[key]);
+      const keys = ['kind', 'text', 'title', 'author', 'year', 'url', 'about'].filter((key) => ref[key]);
       keys.forEach((key, i) => lines.push(`${i === 0 ? '  - ' : '    '}${key}: ${quote(ref[key])}`));
     }
   }

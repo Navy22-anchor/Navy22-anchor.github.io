@@ -165,38 +165,10 @@
   line-height: 1.6;
 }
 
-/* FAQ 제목과 같은 높이에서 시작 (1440 기준 x=1100) */
+/* 참고문헌: 본문 맨 아래, 본문 너비 */
 .references {
-  grid-column: 3;
-  grid-row: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 300px;
-  margin-left: 40px;
-}
-
-.referencesHeading {
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.referenceList {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* 오른쪽 자리가 모자라면 본문 아래로 */
-@media (max-width: 1420px) {
-  .references {
-    grid-column: 2;
-    grid-row: auto;
-    width: 100%;
-    max-width: 680px;
-    margin: 40px 0 0;
-  }
+  grid-column: 2;
+  margin-top: 24px;
 }
 
 @media (max-width: 700px) {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import Markdown from '../components/Markdown.jsx';
-import ReferenceCard from '../components/ReferenceCard.jsx';
+import ReferenceList from '../components/ReferenceList.jsx';
 import { deletePost, loadToken } from '../data/github.js';
 import { removePost } from '../data/localPosts.js';
 import { findPost, isRepoPost, posts } from '../data/posts.js';
@@ -130,16 +130,7 @@ export default function Post({ id }) {
           </section>
         )}
 
-        {post.references?.length > 0 && (
-          <aside className={styles.references} aria-labelledby="references-heading">
-            <h2 id="references-heading" className={styles.referencesHeading}>참고문헌</h2>
-            <div className={styles.referenceList}>
-              {post.references.map((ref, i) => (
-                <ReferenceCard key={i} {...ref} />
-              ))}
-            </div>
-          </aside>
-        )}
+        {post.references?.length > 0 && <ReferenceList references={post.references} className={styles.references} />}
       </main>
     </div>
   );

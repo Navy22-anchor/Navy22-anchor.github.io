@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Markdown from '../components/Markdown.jsx';
-import ReferenceCard from '../components/ReferenceCard.jsx';
+import ReferenceEditor from '../components/ReferenceEditor.jsx';
+import ReferenceList from '../components/ReferenceList.jsx';
+import { referenceText } from '../components/ReferenceIcons.jsx';
 import { stringifyPost } from '../data/frontMatter.js';
 import { clearDraft, emptyDraft, formatDate, loadDraft, loadSavedDraft, postId, publishPost, saveDraft } from '../data/localPosts.js';
 import { findPost, toMarkdown } from '../data/posts.js';
@@ -78,7 +80,7 @@ function useAutosize(value) {
   return ref;
 }
 
-const emptyReference = { title: '', author: '', year: '', url: '', about: '' };
+const emptyReference = { kind: 'paper', text: '', url: '' };
 
 // Figma "Motion / Scrollbar → Toolbar": 두 칸 사이의 스크롤바 막대에 마우스를 올리면 세로 도구모음으로 펼쳐짐
 // 버튼마다 배경이 자기 자리까지 자란 뒤 커지기 시작하고, 모두 배경과 같은 순간(0.25초)에 제 크기가 됨
@@ -411,7 +413,7 @@ function loadEditDraft(id) {
     title: post.title ?? '',
     author: post.author ?? '',
     markdown: toMarkdown(post),
-    references: (post.references ?? []).map((ref) => ({ ...emptyReference, ...ref })),
+    references: (post.references ?? []).map((ref) => ({ kind: ref.kind || 'paper', text: referenceText(ref), url: ref.url ?? '' })),
   };
 }
 
@@ -420,6 +422,7 @@ export default function Write({ editId }) {
   const [original] = useState(() => (editId ? findPost(editId) : null));
   const [draft, setDraft] = useState(() => (original ? loadEditDraft(original.id) : loadDraft()));
   const [status, setStatus] = useState('');
+  const [refFocus, setRefFocus] = useState(null); // 새로 만든 참고문헌 칸에 커서
   const [pending, setPending] = useState(null); // 발행 창에 띄운 글
   const [token, setToken] = useState(loadToken);
   const [publishing, setPublishing] = useState(false);
@@ -504,7 +507,7 @@ export default function Write({ editId }) {
       return;
     }
     const date = new Date();
-    const references = draft.references.filter((ref) => ref.title.trim());
+    const references = draft.references.filter((ref) => referenceText(ref).trim());
     setPending(
       original
         ? { ...draft, references, id: original.id, date: original.date || formatDate(date), category: original.category || loadCategories()[0] }
@@ -571,16 +574,13 @@ export default function Write({ editId }) {
     runTool(tool);
   };
 
-  const setReference = (i, patch) =>
-    update({ references: draft.references.map((ref, j) => (j === i ? { ...ref, ...patch } : ref)) });
-
   // 이전 화면이 있으면 그리로, 이 주소로 바로 열었으면 홈으로
   const goBack = () => {
     if (window.history.length > 1) window.history.back();
     else window.location.hash = '#/';
   };
 
-  const references = draft.references.filter((ref) => ref.title.trim());
+  const references = draft.references.filter((ref) => referenceText(ref).trim());
   const isEmpty = !original && JSON.stringify(draft) === JSON.stringify(emptyDraft);
 
   return (
@@ -628,7 +628,12 @@ export default function Write({ editId }) {
           <ToolRail
             tools={TOOLS}
             onTool={runTool}
-            onReference={() => update({ references: [...draft.references, emptyReference] })}
+            onReference={() => {
+              // 처음 누르면 빈칸 2개, 그다음부터는 1개씩
+              const add = draft.references.length ? [emptyReference] : [emptyReference, emptyReference];
+              update({ references: [...draft.references, ...add] });
+              setRefFocus(draft.references.length);
+            }}
           />
 
           <textarea
@@ -685,27 +690,14 @@ export default function Write({ editId }) {
           />
 
           {draft.references.length > 0 && (
-            <div className={styles.refEditor} aria-label="참고문헌">
-              {draft.references.map((ref, i) => (
-                <fieldset key={i} className={styles.refForm}>
-                  <legend className={styles.srOnly}>참고문헌 {i + 1}</legend>
-                  <input placeholder="제목 (저자, 연도)" value={ref.title} onChange={(e) => setReference(i, { title: e.target.value })} />
-                  <div className={styles.refRow}>
-                    <input placeholder="저자" value={ref.author} onChange={(e) => setReference(i, { author: e.target.value })} />
-                    <input placeholder="연도" value={ref.year} onChange={(e) => setReference(i, { year: e.target.value })} />
-                  </div>
-                  <input placeholder="링크 https://" type="url" value={ref.url} onChange={(e) => setReference(i, { url: e.target.value })} />
-                  <textarea placeholder="설명 또는 메모" rows={2} value={ref.about} onChange={(e) => setReference(i, { about: e.target.value })} />
-                  <button
-                    type="button"
-                    className={styles.refRemove}
-                    onClick={() => update({ references: draft.references.filter((_, j) => j !== i) })}
-                  >
-                    삭제
-                  </button>
-                </fieldset>
-              ))}
-            </div>
+            <ReferenceEditor
+              references={draft.references}
+              focusIndex={refFocus}
+              onChange={(next, focus) => {
+                update({ references: next });
+                setRefFocus(focus ?? null);
+              }}
+            />
           )}
         </section>
 
@@ -716,16 +708,7 @@ export default function Write({ editId }) {
           </h1>
           <p className={styles.previewByline}>by {draft.author || '작성자 이름'}</p>
           <Markdown source={draft.markdown} className={styles.previewBody} />
-          {references.length > 0 && (
-            <>
-              <h2 className={styles.previewRefHeading}>참고문헌</h2>
-              <div className={styles.previewRefs}>
-                {references.map((ref, i) => (
-                  <ReferenceCard key={i} {...ref} />
-                ))}
-              </div>
-            </>
-          )}
+          <ReferenceList references={references} className={styles.previewRefs} />
         </section>
       </div>
     </div>

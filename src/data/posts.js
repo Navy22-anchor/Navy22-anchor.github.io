@@ -25,20 +25,8 @@ export const posts = [
       { q: '질문 예시 3', a: '답변 예시 3입니다. 실제 내용으로 바꿔 주세요.' },
     ],
     references: [
-      {
-        title: '참고문헌 제목 (저자, 연도)',
-        author: '작성자 이름',
-        year: '2026',
-        url: 'https://example.com',
-        about: '참고문헌 설명 또는 메모를 여기에 적습니다. 글에서 인용한 내용과 출처를 간단히 정리하는 자리입니다.',
-      },
-      {
-        title: '참고문헌 제목 (저자, 연도)',
-        author: '작성자 이름',
-        year: '2026',
-        url: 'https://example.com',
-        about: '참고문헌 설명 또는 메모를 여기에 적습니다. 글에서 인용한 내용과 출처를 간단히 정리하는 자리입니다.',
-      },
+      { kind: 'paper', text: '저자, 논문 또는 책 제목, 연도, 페이지.', url: 'https://example.com' },
+      { kind: 'blog', text: '저자, 블로그 글 제목, 날짜, 사이트 이름.', url: 'https://example.com' },
     ],
   },
 ];

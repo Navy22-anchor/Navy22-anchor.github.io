@@ -198,8 +198,7 @@
 /* 입력칸은 테두리 없이, 포커스 때만 표시 */
 .titleField,
 .source,
-.authorField,
-.refForm :is(input, textarea) {
+.authorField {
   width: 100%;
   border: 0;
   outline: none;
@@ -220,8 +219,7 @@
 
 .titleField::placeholder,
 .source::placeholder,
-.authorField::placeholder,
-.refForm ::placeholder {
+.authorField::placeholder {
   color: var(--write-muted);
   opacity: 1;
 }
@@ -253,57 +251,6 @@
   overflow: hidden;
   font-size: 15px;
   line-height: 1.7;
-}
-
-/* 참고문헌 입력 */
-.refEditor {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.refForm {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 16px;
-  border: 0;
-  border-radius: 12px;
-  background: var(--write-surface);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.refForm :is(input, textarea) {
-  padding: 4px 0;
-}
-
-.refForm input:first-of-type {
-  font-weight: 600;
-}
-
-.refRow {
-  display: grid;
-  grid-template-columns: 1fr 100px;
-  gap: 12px;
-}
-
-.refRemove {
-  align-self: flex-end;
-  color: var(--write-muted);
-  font-size: 13px;
-}
-
-.refRemove:hover {
-  color: var(--color-text);
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
 }
 
 /* ── 미리보기 ── */
@@ -364,16 +311,8 @@
   display: none;
 }
 
-.previewRefHeading {
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
 .previewRefs {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  margin-top: 8px;
 }
 
 /* 좁은 화면: 원본 아래에 미리보기, 도구는 예전처럼 가로 막대 */
