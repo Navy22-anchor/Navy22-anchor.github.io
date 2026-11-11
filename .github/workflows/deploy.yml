@@ -25,6 +25,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        # 저장소 Settings → Secrets and variables → Actions → Variables 에 넣은 Supabase 주소·공개 키
+        env:
+          Supabase_Project_URL: ${{ vars.SUPABASE_PROJECT_URL }}
+          Publishable_Key: ${{ vars.PUBLISHABLE_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
