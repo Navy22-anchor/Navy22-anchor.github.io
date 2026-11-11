@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ScheduleCalendar } from './DateTime.jsx';
-import { SCHEDULE_GRACE, scheduleMarks, setSchedules, useSchedules } from './schedules.js';
+import { SCHEDULE_GRACE, addSchedule as saveSchedule, scheduleMarks, takeDue, useSchedules } from './schedules.js';
+import { useCanEdit } from '../data/supabase.js';
 import styles from './DynamicIsland.module.css';
 
 // 작은 아일랜드에 마우스를 올리거나 포커스하면 Figma "Dynamic Island" (44:788) 재생기로 펼쳐짐.
@@ -211,6 +212,7 @@ export default function DynamicIsland({
 
   const [results, setResults] = useState([]);
   const schedules = useSchedules();
+  const editable = useCanEdit();
   const [scheduling, setScheduling] = useState(null); // 달력을 연 곡 { track, top, button }
   const [wake, setWake] = useState(0);
   const pickColor = useAlbumColor(scheduling?.track.artwork, ON_WHITE);
@@ -263,9 +265,8 @@ export default function DynamicIsland({
   useEffect(() => {
     if (!schedules.length) return undefined;
     const now = Date.now();
-    const due = schedules.filter((s) => s.at <= now);
+    const due = takeDue(now);
     if (due.length) {
-      setSchedules((list) => list.filter((s) => s.at > now));
       const latest = due.filter((s) => s.at > now - SCHEDULE_GRACE).at(-1);
       if (latest) playScheduled(latest.track);
       return undefined;
@@ -307,11 +308,7 @@ export default function DynamicIsland({
   };
   const addSchedule = (at) => {
     const { track: t } = scheduling;
-    setSchedules((list) =>
-      [...list, { id: `${t.id}-${at.getTime()}`, at: at.getTime(), color: pickColor, track: t }]
-        .filter((s, i, all) => all.findIndex((o) => o.id === s.id) === i)
-        .sort((a, b) => a.at - b.at),
-    );
+    saveSchedule({ id: `${t.id}-${at.getTime()}`, at: at.getTime(), color: pickColor, track: t }).catch(() => {});
     closeSchedule();
   };
 
@@ -502,17 +499,19 @@ export default function DynamicIsland({
                           >
                             <Icon name={current ? 'smallPause' : 'smallPlay'} />
                           </button>
-                          {/* 예약이 걸린 곡은 타이머가 앨범 색으로 */}
-                          <button
-                            type="button"
-                            aria-label={`${r.title} 재생 예약${pending.length ? ` (${pending.length}개 예약됨)` : ''}`}
-                            aria-expanded={scheduling?.track.id === r.id}
-                            title={pending.map((s) => scheduleFormat.format(s.at)).join('\n') || undefined}
-                            style={pending.length && pending[0].color ? { color: pending[0].color } : undefined}
-                            onClick={(e) => openSchedule(r, e.currentTarget)}
-                          >
-                            <Icon name="timer" />
-                          </button>
+                          {/* 예약이 걸린 곡은 타이머가 앨범 색으로. 예약은 주인(로그인)만 */}
+                          {editable && (
+                            <button
+                              type="button"
+                              aria-label={`${r.title} 재생 예약${pending.length ? ` (${pending.length}개 예약됨)` : ''}`}
+                              aria-expanded={scheduling?.track.id === r.id}
+                              title={pending.map((s) => scheduleFormat.format(s.at)).join('\n') || undefined}
+                              style={pending.length && pending[0].color ? { color: pending[0].color } : undefined}
+                              onClick={(e) => openSchedule(r, e.currentTarget)}
+                            >
+                              <Icon name="timer" />
+                            </button>
+                          )}
                         </span>
                       </li>
                     );
@@ -543,7 +542,7 @@ export default function DynamicIsland({
         </div>
       </div>
 
-      {scheduling && (
+      {scheduling && editable && (
         <ScheduleCalendar
           key={scheduling.track.id}
           className={styles.scheduler}

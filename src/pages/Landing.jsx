@@ -3,7 +3,8 @@ import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import DateTime from '../components/DateTime.jsx';
 import DynamicIsland from '../components/DynamicIsland.jsx';
 import ProjectStrip from '../components/ProjectStrip.jsx';
-import { addCategory, loadCategories, removeCategory } from '../data/categories.js';
+import { addCategory, loadCategories, removeCategory, useCategories } from '../data/categories.js';
+import { useCanEdit } from '../data/supabase.js';
 import { loadRows } from '../data/projects.js';
 import braceLeft from '../assets/brace-left.svg';
 import braceRight from '../assets/brace-right.svg';
@@ -18,7 +19,8 @@ const startIndex = (row) => Math.floor((row.items.length - 1) / 2) * (row.kind =
 
 export default function Landing() {
   const [{ rows, initialRow }] = useState(loadRows);
-  const [categories, setCategories] = useState(loadCategories);
+  const categories = useCategories();
+  const editable = useCanEdit(); // 카테고리 추가·삭제는 주인(로그인)만
   const [category, setCategory] = useState(categories[0]);
   const [adding, setAdding] = useState(false); // "+"를 눌러 새 카테고리 이름을 입력하는 중
   const [removing, setRemoving] = useState(false); // "−"를 눌러 지울 카테고리를 고르는 중
@@ -45,7 +47,6 @@ export default function Landing() {
   const confirmRemove = () => {
     removeCategory(confirming);
     const next = loadCategories();
-    setCategories(next);
     setConfirming(null);
     if (next.length === 0) setRemoving(false);
   };
@@ -126,22 +127,24 @@ export default function Landing() {
 
       <ul className={styles.categories} aria-label="카테고리" data-removing={removing || undefined}>
         {/* Figma "minus" (157:1609): 목록 바로 위. 누르면 지울 카테고리를 고르는 상태 */}
-        <li className={styles.minusItem}>
-          <button
-            type="button"
-            className={styles.minus}
-            aria-label={removing ? '카테고리 삭제 끝내기' : '카테고리 삭제'}
-            aria-pressed={removing}
-            onClick={() => {
-              setAdding(false);
-              setRemoving((r) => !r);
-            }}
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-              <path d="M0 5H10" stroke="currentColor" strokeWidth="1.4" />
-            </svg>
-          </button>
-        </li>
+        {editable && (
+          <li className={styles.minusItem}>
+            <button
+              type="button"
+              className={styles.minus}
+              aria-label={removing ? '카테고리 삭제 끝내기' : '카테고리 삭제'}
+              aria-pressed={removing}
+              onClick={() => {
+                setAdding(false);
+                setRemoving((r) => !r);
+              }}
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                <path d="M0 5H10" stroke="currentColor" strokeWidth="1.4" />
+              </svg>
+            </button>
+          </li>
+        )}
         {categories.map((name) => (
           <li key={name}>
             <button
@@ -155,40 +158,39 @@ export default function Landing() {
             </button>
           </li>
         ))}
-        <li>
-          {adding ? (
-            <input
-              className={styles.categoryInput}
-              autoFocus
-              maxLength={20}
-              placeholder="새 카테고리"
-              aria-label="새 카테고리 이름 (Enter로 추가, Esc로 취소)"
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') setAdding(false);
-                if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
-                const name = addCategory(e.currentTarget.value);
-                if (name) {
-                  setCategories(loadCategories());
-                  setCategory(name);
-                }
-                setAdding(false);
-              }}
-              onBlur={() => setAdding(false)}
-            />
-          ) : (
-            <button
-              type="button"
-              className={styles.category}
-              aria-label="카테고리 추가"
-              onClick={() => {
-                setRemoving(false);
-                setAdding(true);
-              }}
-            >
-              +
-            </button>
-          )}
-        </li>
+        {editable && (
+          <li>
+            {adding ? (
+              <input
+                className={styles.categoryInput}
+                autoFocus
+                maxLength={20}
+                placeholder="새 카테고리"
+                aria-label="새 카테고리 이름 (Enter로 추가, Esc로 취소)"
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') setAdding(false);
+                  if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+                  const name = addCategory(e.currentTarget.value);
+                  if (name) setCategory(name);
+                  setAdding(false);
+                }}
+                onBlur={() => setAdding(false)}
+              />
+            ) : (
+              <button
+                type="button"
+                className={styles.category}
+                aria-label="카테고리 추가"
+                onClick={() => {
+                  setRemoving(false);
+                  setAdding(true);
+                }}
+              >
+                +
+              </button>
+            )}
+          </li>
+        )}
       </ul>
 
       {confirming && <ConfirmDialog onConfirm={confirmRemove} onClose={() => setConfirming(null)} />}
