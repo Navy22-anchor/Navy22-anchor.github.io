@@ -58,6 +58,7 @@
   right: 5.52%; /* (1920 - 1814) / 1920 */
   transform: scale(0.7);
   transform-origin: top right;
+  --island-calendar-scale: calc(1 / 0.7);
 }
 
 /* 날짜·시간: 아일랜드 왼쪽 25px (Figma x 1512~1656) */

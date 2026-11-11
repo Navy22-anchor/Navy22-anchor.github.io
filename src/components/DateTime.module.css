@@ -148,6 +148,57 @@
   }
 }
 
+/* 하루 보기에서 주가 바뀔 때: 1) 이전 주가 위로(전 주로 가면 아래로) 흐려지며 사라지고
+   2) 그 자리에 새 주가 아래에서(전 주면 위에서) 흐려진 채로 들어옴 */
+.week[data-leaving] {
+  position: absolute;
+  top: 2.1px; /* .weeks 위 여백 */
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  animation: weekOutUp 0.2s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.week[data-leaving='prev'] {
+  animation-name: weekOutDown;
+}
+
+.week[data-swap] {
+  animation: weekSwapUp 0.25s var(--dt-ease) 0.15s both;
+}
+
+.week[data-swap='prev'] {
+  animation-name: weekSwapDown;
+}
+
+@keyframes weekOutUp {
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes weekOutDown {
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes weekSwapUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes weekSwapDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
 /* 하루 보기: Figma 빈 공간 220px의 70%. 3단계로 일정이 아래에서 올라옴 */
 .dayEvents {
   position: relative;
@@ -266,6 +317,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .week,
+  .week[data-leaving],
+  .week[data-swap],
   .timeline,
   .timelineNext,
   .timelinePrev,
@@ -284,6 +337,28 @@
   font-size: 14px;
   line-height: 17.5px;
   letter-spacing: -0.3px;
+}
+
+/* 예약한 날짜 아래 앨범 색 점: Figma 6.02 × 70% ≈ 4.2 (달력 전체가 Figma의 70%) */
+.day {
+  position: relative;
+}
+
+.marks {
+  position: absolute;
+  bottom: 2.1px;
+  left: 50%;
+  display: flex;
+  gap: 1.4px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.marks i {
+  width: 4.214px;
+  height: 4.214px;
+  border-radius: 50%;
+  background: var(--dt-red);
 }
 
 button.day:hover {
@@ -311,6 +386,44 @@ button.day:hover {
   font-size: 11.9px;
   line-height: 15.4px;
   letter-spacing: -0.3px;
+}
+
+/* 예약 달력: 놓는 자리는 쓰는 쪽에서 정함 */
+.scheduler .calendar {
+  position: relative;
+  top: auto;
+  right: auto;
+}
+
+.calendar:focus {
+  outline: none;
+}
+
+/* 예약 모드 하루 보기: 위아래 여백을 보이는 높이의 절반(154 / 2)씩 둬서 0시~24시가 모두 가운데 줄까지 옴 */
+.dayEvents[data-picking] {
+  box-sizing: border-box; /* 여백을 넣어도 높이는 154 그대로 */
+  padding-block: 77px;
+  cursor: grab;
+}
+
+.dayEvents[data-picking]:active {
+  cursor: grabbing;
+}
+
+/* 고른 시각 줄: 스크롤 상자 가운데에 붙어 있음 (높이 0이라 일정 자리를 차지하지 않음) */
+.nowLine.pickLine {
+  position: sticky;
+  top: 0; /* 붙는 기준이 위 여백(77) 안쪽이라 0이 곧 가운데 */
+  left: auto;
+  right: auto;
+  z-index: 1;
+  margin: 0 11.2px;
+  pointer-events: none;
+}
+
+.dayEvents[data-picking]:focus-visible {
+  outline: 2px solid var(--dt-blue);
+  outline-offset: -2px;
 }
 
 /* 다크 모드: iOS Colors 컬렉션의 Dark 값 */

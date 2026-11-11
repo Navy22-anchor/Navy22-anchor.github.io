@@ -472,7 +472,35 @@
   100% { transform: scale(1); }
 }
 
+/* ── 노래 예약 달력: 아일랜드(펼친 367) 왼쪽 12px, 누른 줄 높이에 맞춤 ── */
+.scheduler {
+  position: absolute;
+  right: calc(100% + (367px - 190px) / 2 + 12px);
+  z-index: 3;
+  /* 랜딩은 아일랜드를 70%로 줄여 그림. 달력은 날짜 알약 옆 달력과 같은 크기로 보이게 되돌림 */
+  transform: scale(var(--island-calendar-scale, 1));
+  transform-origin: top right;
+  pointer-events: auto;
+  animation: schedulerIn 0.25s cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* 아일랜드가 접히면 달력도 숨김 (고르던 날짜·시각은 그대로, 다시 펼치면 이어서) */
+.root:not(:hover, :focus-within) .scheduler {
+  visibility: hidden;
+}
+
+@keyframes schedulerIn {
+  from {
+    opacity: 0;
+    translate: 8px 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .scheduler {
+    animation: none;
+  }
+
   .root :is(.shell, .island, .expanded, .searchField, .searchInput, .playControls > button) {
     transition: none !important;
   }

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { ScheduleCalendar } from './DateTime.jsx';
+import { SCHEDULE_GRACE, scheduleMarks, setSchedules, useSchedules } from './schedules.js';
 import styles from './DynamicIsland.module.css';
 
 // 작은 아일랜드에 마우스를 올리거나 포커스하면 Figma "Dynamic Island" (44:788) 재생기로 펼쳐짐.
@@ -13,6 +15,68 @@ const SEARCH_DELAY = 300; // 입력을 멈추고 이만큼 지나면 검색 (ms)
 const FIELD_HEIGHT = 30;
 const ROW_HEIGHT = 53;
 const ROW_GAP = 21;
+// 노래 예약은 schedules.js에 저장. 탭이 열려 있어야 그 시각에 재생됨
+const scheduleFormat = new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric', weekday: 'short', hour: 'numeric', minute: '2-digit' });
+
+// 흰 달력 위 1px 줄로도 보이게: 색상(H)·채도(S)는 두고 밝기(L)만 55% 이하로
+function readableColor(r, g, b) {
+  const [R, G, B] = [r, g, b].map((v) => v / 255);
+  const max = Math.max(R, G, B);
+  const min = Math.min(R, G, B);
+  const l = (max + min) / 2;
+  const d = max - min;
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  let h = 0;
+  if (d) {
+    if (max === R) h = ((G - B) / d) % 6;
+    else if (max === G) h = (B - R) / d + 2;
+    else h = (R - G) / d + 4;
+  }
+  return `hsl(${Math.round(((h * 60) + 360) % 360)} ${Math.round(s * 100)}% ${Math.round(Math.min(l, 0.55) * 100)}%)`;
+}
+
+// 앨범 표지의 주요 색: 작게 줄여 그린 뒤, 회색·너무 밝거나 어두운 칸을 빼고 가장 많은 색 묶음의 평균
+// (Apple 이미지 서버가 CORS를 허용해서 픽셀을 읽을 수 있음. 못 읽으면 null → 기본 빨강)
+function useAlbumColor(src) {
+  const [color, setColor] = useState(null);
+  useEffect(() => {
+    setColor(null);
+    if (!src) return undefined;
+    // <img>로 이미 받은 표지는 CORS 없이 캐시돼 캔버스가 막힐 수 있어, fetch(CORS)로 따로 받아 읽음
+    const controller = new AbortController();
+    fetch(src, { mode: 'cors', signal: controller.signal })
+      .then((res) => res.blob())
+      .then((blob) => createImageBitmap(blob))
+      .then((img) => {
+        const size = 24;
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = size;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, size, size);
+        const { data } = ctx.getImageData(0, 0, size, size);
+        const buckets = new Map();
+        for (let i = 0; i < data.length; i += 4) {
+          const [r, g, b] = [data[i], data[i + 1], data[i + 2]];
+          const max = Math.max(r, g, b);
+          const min = Math.min(r, g, b);
+          if (max - min < 40 || max < 50 || min > 225) continue; // 회색·검정·흰색
+          const key = (r >> 5) * 64 + (g >> 5) * 8 + (b >> 5);
+          const bucket = buckets.get(key) ?? { score: 0, count: 0, r: 0, g: 0, b: 0 };
+          bucket.score += 1 + (max - min) / 255; // 선명한 색에 조금 더 무게
+          bucket.count += 1;
+          bucket.r += r;
+          bucket.g += g;
+          bucket.b += b;
+          buckets.set(key, bucket);
+        }
+        const best = [...buckets.values()].sort((x, y) => y.score - x.score)[0];
+        if (best) setColor(readableColor(best.r / best.count, best.g / best.count, best.b / best.count));
+      })
+      .catch(() => {}); // 못 읽으면 기본색
+    return () => controller.abort();
+  }, [src]);
+  return color;
+}
 
 const formatTime = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
@@ -45,6 +109,22 @@ function Icon({ name, size }) {
       <svg width="10" height="12" viewBox="0 0 10 12" aria-hidden="true">
         <rect x="0" y="0" width="3.5" height="12" rx="1.5" fill="currentColor" />
         <rect x="6.5" y="0" width="3.5" height="12" rx="1.5" fill="currentColor" />
+      </svg>
+    );
+  }
+  // 검색 결과 줄의 예약 타이머 (Figma "Timer icon" 231:3099, 24 → 16)
+  if (name === 'timer') {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <g stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19.5 13.5c0 3.15-1.97 5.97-4.93 7.05-2.97 1.08-6.29.19-8.31-2.23-2.03-2.41-2.33-5.84-.75-8.57 1.58-2.73 4.69-4.18 7.8-3.64" />
+          <path d="M12.6 12.92l3.94-1.04M12 6V3.5M9.5 3h5M6.53 7.5L5 6.03" />
+        </g>
+        <g fill="currentColor">
+          <circle cx="19.26" cy="11.22" r="0.875" />
+          <circle cx="18.15" cy="9.15" r="0.65" />
+          <circle cx="16.45" cy="7.53" r="0.425" />
+        </g>
       </svg>
     );
   }
@@ -101,6 +181,10 @@ export default function DynamicIsland({
   const buttonRef = useRef(null);
 
   const [results, setResults] = useState([]);
+  const schedules = useSchedules();
+  const [scheduling, setScheduling] = useState(null); // 달력을 연 곡 { track, top, button }
+  const [wake, setWake] = useState(0);
+  const pickColor = useAlbumColor(scheduling?.track.artwork);
 
   // 미리듣기 주소를 받아 오디오를 준비. 30초가 끝나면 처음부터 반복
   useEffect(() => {
@@ -145,6 +229,62 @@ export default function DynamicIsland({
     };
   }, [trackId]);
 
+  // 예약 시각이 되면 재생. 가장 가까운 예약까지 기다리되 1분마다 다시 확인 (절전 후 깨어난 경우 대비)
+  useEffect(() => {
+    if (!schedules.length) return undefined;
+    const now = Date.now();
+    const due = schedules.filter((s) => s.at <= now);
+    if (due.length) {
+      setSchedules((list) => list.filter((s) => s.at > now));
+      const latest = due.filter((s) => s.at > now - SCHEDULE_GRACE).at(-1);
+      if (latest) playScheduled(latest.track);
+      return undefined;
+    }
+    const next = Math.min(...schedules.map((s) => s.at));
+    const timer = setTimeout(() => setWake((n) => n + 1), Math.min(next - now, 60000));
+    return () => clearTimeout(timer);
+  }, [schedules, wake]);
+
+  // 미리듣기 주소가 바뀌었을 수 있어 곡 ID로 다시 받아 재생. 못 받으면 저장해 둔 주소로
+  // (방문한 뒤 한 번도 누르지 않았다면 브라우저가 자동 재생을 막을 수 있음)
+  const playScheduled = (t) => {
+    const start = (url) => {
+      if (!url) return;
+      const audio = audioRef.current;
+      audio.src = url;
+      setTrack({ ...t, previewUrl: url });
+      setElapsed(0);
+      audio.play().catch(() => {});
+    };
+    fetch(`https://itunes.apple.com/lookup?id=${t.id}&country=US`)
+      .then((res) => res.json())
+      .then((data) => start(data.results?.[0]?.previewUrl || t.previewUrl))
+      .catch(() => start(t.previewUrl));
+  };
+
+  // 타이머: 그 줄 높이에 맞춰 아일랜드 왼쪽에 달력을 펼침. 같은 곡을 다시 누르면 닫힘
+  const openSchedule = (r, button) => {
+    const root = rootRef.current;
+    const rect = root.getBoundingClientRect();
+    const scale = rect.width / root.offsetWidth || 1; // 랜딩에서 아일랜드를 70%로 줄여 그림
+    const top = (button.closest('li').getBoundingClientRect().top - rect.top) / scale;
+    setScheduling((cur) => (cur?.track.id === r.id ? null : { track: r, top, button }));
+  };
+  const closeSchedule = () => {
+    const button = scheduling?.button;
+    setScheduling(null);
+    setTimeout(() => button?.focus({ preventScroll: true })); // 달력이 사라져도 아일랜드는 펼친 채로
+  };
+  const addSchedule = (at) => {
+    const { track: t } = scheduling;
+    setSchedules((list) =>
+      [...list, { id: `${t.id}-${at.getTime()}`, at: at.getTime(), color: pickColor, track: t }]
+        .filter((s, i, all) => all.findIndex((o) => o.id === s.id) === i)
+        .sort((a, b) => a.at - b.at),
+    );
+    closeSchedule();
+  };
+
   // 입력을 멈추면 iTunes에서 노래 검색 (최대 5개)
   useEffect(() => {
     const term = query.trim();
@@ -174,6 +314,7 @@ export default function DynamicIsland({
   // 검색창을 클릭하면(포커스) 고정: 마우스가 나가도 그대로, Esc나 아일랜드 밖을 누르면 닫힘
   const openSearch = () => setSearching(true);
   const closeSearch = () => {
+    setScheduling(null);
     setSearching(false);
     setPinned(false);
     setQuery('');
@@ -314,6 +455,7 @@ export default function DynamicIsland({
                 <ul className={styles.results} aria-label="검색 결과">
                   {results.map((r) => {
                     const current = playing && track.previewUrl === r.previewUrl;
+                    const pending = schedules.filter((s) => s.track.id === r.id);
                     return (
                       <li key={r.id} className={styles.result}>
                         <Artwork className={styles.bigArtwork} src={r.artwork} size={53} />
@@ -322,11 +464,24 @@ export default function DynamicIsland({
                           <span className={styles.artist}>{r.artist}</span>
                         </span>
                         <span className={styles.resultControls}>
-                          <button type="button" aria-label={`${r.title} 재생`} aria-pressed={current} onClick={() => playResult(r)}>
-                            <Icon name="smallPlay" />
+                          <button
+                            type="button"
+                            aria-label={current ? `${r.title} 일시정지` : `${r.title} 재생`}
+                            aria-pressed={current}
+                            onClick={() => (current ? pauseResult(r) : playResult(r))}
+                          >
+                            <Icon name={current ? 'smallPause' : 'smallPlay'} />
                           </button>
-                          <button type="button" aria-label={`${r.title} 일시정지`} onClick={() => pauseResult(r)} disabled={!current}>
-                            <Icon name="smallPause" />
+                          {/* 예약이 걸린 곡은 타이머가 앨범 색으로 */}
+                          <button
+                            type="button"
+                            aria-label={`${r.title} 재생 예약${pending.length ? ` (${pending.length}개 예약됨)` : ''}`}
+                            aria-expanded={scheduling?.track.id === r.id}
+                            title={pending.map((s) => scheduleFormat.format(s.at)).join('\n') || undefined}
+                            style={pending.length && pending[0].color ? { color: pending[0].color } : undefined}
+                            onClick={(e) => openSchedule(r, e.currentTarget)}
+                          >
+                            <Icon name="timer" />
                           </button>
                         </span>
                       </li>
@@ -357,6 +512,18 @@ export default function DynamicIsland({
           </div>
         </div>
       </div>
+
+      {scheduling && (
+        <ScheduleCalendar
+          key={scheduling.track.id}
+          className={styles.scheduler}
+          style={{ top: scheduling.top, ...(pickColor && { '--dt-red': pickColor }) }}
+          label={scheduling.track.title}
+          marks={scheduleMarks(schedules)}
+          onConfirm={addSchedule}
+          onClose={closeSchedule}
+        />
+      )}
     </div>
   );
 }
