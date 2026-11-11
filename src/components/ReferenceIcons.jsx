@@ -1,3 +1,5 @@
+import { NEWS_PATH } from './newsIconPath.js';
+
 // 참고문헌 아이콘 (Figma 204:2392). 색은 글자색(currentColor)을 따라가서 다크 모드에서도 보임
 const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.75, strokeLinecap: 'round', strokeLinejoin: 'round' };
 
@@ -31,6 +33,15 @@ export function BlogIcon(props) {
   );
 }
 
+// 뉴스의 N: 신문·뉴스 기사
+export function NewsIcon(props) {
+  return (
+    <svg width="13" height="18" viewBox="0 0 19 26" aria-hidden="true" {...props}>
+      <path fill="currentColor" d={NEWS_PATH} />
+    </svg>
+  );
+}
+
 // 지구본: 원문 링크
 export function GlobeIcon(props) {
   return (
@@ -54,9 +65,27 @@ export function PlusIcon(props) {
   );
 }
 
+// 입력창 접기(–)·닫기(×) (Figma 214:2452)
+export function MinimizeIcon(props) {
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" {...props}>
+      <path d="M0.7 5H9.3" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function CloseIcon(props) {
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" {...props}>
+      <path d="M1.5 1.5L8.5 8.5M8.5 1.5L1.5 8.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export const REFERENCE_KINDS = [
   { id: 'paper', label: '논문·책', Icon: ScrollIcon },
   { id: 'blog', label: '블로그·글', Icon: BlogIcon },
+  { id: 'news', label: '뉴스', Icon: NewsIcon },
 ];
 
 export const kindIcon = (kind) => (REFERENCE_KINDS.find((k) => k.id === kind) ?? REFERENCE_KINDS[0]).Icon;

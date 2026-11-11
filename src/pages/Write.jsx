@@ -423,6 +423,8 @@ export default function Write({ editId }) {
   const [draft, setDraft] = useState(() => (original ? loadEditDraft(original.id) : loadDraft()));
   const [status, setStatus] = useState('');
   const [refFocus, setRefFocus] = useState(null); // 새로 만든 참고문헌 칸에 커서
+  const [refCollapsed, setRefCollapsed] = useState(false); // 참고문헌 입력창을 바로 접음 (–)
+  const [refClosed, setRefClosed] = useState(false); // 참고문헌 입력창을 닫음 (×). [1] 도구로 다시 열림
   const [pending, setPending] = useState(null); // 발행 창에 띄운 글
   const [token, setToken] = useState(loadToken);
   const [publishing, setPublishing] = useState(false);
@@ -633,6 +635,8 @@ export default function Write({ editId }) {
               const add = draft.references.length ? [emptyReference] : [emptyReference, emptyReference];
               update({ references: [...draft.references, ...add] });
               setRefFocus(draft.references.length);
+              setRefCollapsed(false);
+              setRefClosed(false);
             }}
           />
 
@@ -689,10 +693,18 @@ export default function Write({ editId }) {
             }}
           />
 
-          {draft.references.length > 0 && (
+          {draft.references.length > 0 && !refClosed && (
             <ReferenceEditor
               references={draft.references}
               focusIndex={refFocus}
+              collapsed={refCollapsed}
+              onCollapsedChange={setRefCollapsed}
+              onClose={() => {
+                // 닫을 때 비어 있는 칸은 정리
+                update({ references: draft.references.filter((ref) => referenceText(ref).trim() || ref.url) });
+                setRefClosed(true);
+                setRefCollapsed(false);
+              }}
               onChange={(next, focus) => {
                 update({ references: next });
                 setRefFocus(focus ?? null);

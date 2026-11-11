@@ -2,6 +2,10 @@
 .list,
 .editor {
   --ref-tile: var(--color-placeholder);
+}
+
+.list,
+.rows {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -65,9 +69,19 @@
   overflow-wrap: anywhere;
 }
 
-/* 입력창 카드 */
+/* 입력창 카드: 글 작성 칸 아래쪽 가운데에 떠 있음 (Figma 21:38) */
 .editor {
+  --collapse: 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+
+  position: sticky;
+  bottom: 32px;
+  z-index: 2;
+  align-self: center;
+  box-sizing: border-box;
+  width: min(400px, 100%);
+  margin-top: auto;
   padding: 32px 28px 28px;
+  transition: padding var(--collapse);
   border-radius: 16px;
   background: var(--color-surface);
   box-shadow:
@@ -108,9 +122,10 @@
   position: relative;
 }
 
+/* 입력창이 화면 아래에 붙어 있어서 위로 펼침 */
 .menu {
   position: absolute;
-  top: calc(100% + 6px);
+  bottom: calc(100% + 6px);
   left: -6px;
   z-index: 10;
   display: flex;
@@ -153,5 +168,108 @@
 
   .menu .tile {
     --ref-tile: var(--color-hover);
+  }
+}
+
+/* ── 접기(–)·닫기(×) ── 버튼 18px, 아이콘 10px. 펼침: 아이콘 가운데가 위 16 / 오른쪽 16·34 */
+.controls {
+  position: absolute;
+  inset: 0 0 auto auto;
+  z-index: 1;
+}
+
+.control {
+  position: absolute;
+  top: 7px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--color-secondary);
+  opacity: 0.7;
+  cursor: pointer;
+  transition:
+    top var(--collapse),
+    right var(--collapse),
+    opacity 0.15s,
+    transform 0.15s ease-out;
+}
+
+.control:hover,
+.control:focus-visible {
+  opacity: 1;
+}
+
+/* 누를 때 살짝 작아짐 */
+.control:active {
+  transform: scale(0.75);
+}
+
+.close {
+  right: 7px;
+}
+
+.minimize {
+  right: 25px;
+}
+
+/* 접힌 바: 펼친 너비의 115%(460) × 64, 아이콘은 세로 가운데(32) */
+.editor[data-collapsed] {
+  width: min(460px, 100%);
+  height: 64px;
+  padding-top: 32px;
+  padding-bottom: 32px;
+  overflow: hidden;
+}
+
+.editor[data-collapsed] .control {
+  top: 23px;
+}
+
+.editor[data-collapsed] .close {
+  right: 10px;
+}
+
+.editor[data-collapsed] .minimize {
+  right: 31px;
+}
+
+/* 줄과 + 바는 접힐 때 먼저 흐려짐 */
+.rows {
+  transition: opacity 0.2s ease-out;
+}
+
+.editor[data-collapsed] .rows {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s ease-out,
+    visibility 0s 0.2s;
+}
+
+.editor[data-animating] {
+  overflow: hidden;
+}
+
+/* 접힌 바 어디를 눌러도 펼침 */
+.expand {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor,
+  .control,
+  .rows {
+    transition: none;
   }
 }

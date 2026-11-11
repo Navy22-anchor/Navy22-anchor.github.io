@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { GlobeIcon, PlusIcon, REFERENCE_KINDS, kindIcon } from './ReferenceIcons.jsx';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { CloseIcon, GlobeIcon, MinimizeIcon, PlusIcon, REFERENCE_KINDS, kindIcon } from './ReferenceIcons.jsx';
 import styles from './Reference.module.css';
 
 // 왼쪽 아이콘을 누르면 종류(두루마리 / b)를 고르는 드롭다운
@@ -58,20 +58,49 @@ function KindPicker({ kind, onChange }) {
   );
 }
 
-// 글쓰기 화면의 참고문헌 입력창 (Figma 198:2886)
-export default function ReferenceEditor({ references, onChange, focusIndex }) {
+// Figma "Motion / 참고문헌 – → Bar": – 를 누르면 400×172 → 460×64 바로 접힘 (아래 끝은 제자리)
+const COLLAPSE = { duration: 500, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' };
+const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+// 글쓰기 화면의 참고문헌 입력창 (Figma 198:2886, 접힌 모습 214:2452)
+export default function ReferenceEditor({ references, onChange, focusIndex, collapsed, onCollapsedChange, onClose }) {
   const [linkOpen, setLinkOpen] = useState(() => new Set());
   const inputs = useRef([]);
+  const card = useRef(null);
+  const fromSize = useRef(null);
 
+  // 접기·펼치기 전 크기를 재 두었다가, 바뀐 뒤 크기까지 움직임
+  const toggle = (next) => {
+    const el = card.current;
+    fromSize.current = el ? { width: el.offsetWidth, height: el.offsetHeight } : null;
+    onCollapsedChange(next);
+  };
+  useLayoutEffect(() => {
+    const el = card.current;
+    const from = fromSize.current;
+    fromSize.current = null;
+    if (!el || !from || reducedMotion()) return;
+    const to = { width: el.offsetWidth, height: el.offsetHeight };
+    if (from.width === to.width && from.height === to.height) return;
+    el.dataset.animating = '';
+    const px = ({ width, height }) => ({ width: `${width}px`, height: `${height}px` });
+    const anim = el.animate([px(from), px(to)], COLLAPSE);
+    anim.onfinish = anim.oncancel = () => delete el.dataset.animating;
+  }, [collapsed]);
+
+  // 새 칸이나 지운 줄의 윗줄로 커서를 옮기고, 글 끝에 둠
   useEffect(() => {
-    if (focusIndex != null) inputs.current[focusIndex]?.focus();
+    const el = focusIndex != null && inputs.current[focusIndex];
+    if (!el) return;
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
   }, [focusIndex, references.length]);
 
   const set = (i, patch) => onChange(references.map((ref, j) => (j === i ? { ...ref, ...patch } : ref)));
   const remove = (i) => {
-    onChange(references.filter((_, j) => j !== i));
+    const next = references.filter((_, j) => j !== i);
+    onChange(next, next.length ? Math.max(0, i - 1) : null);
     setLinkOpen(new Set());
-    requestAnimationFrame(() => inputs.current[Math.max(0, i - 1)]?.focus());
   };
   const toggleLink = (i) =>
     setLinkOpen((prev) => {
@@ -82,66 +111,85 @@ export default function ReferenceEditor({ references, onChange, focusIndex }) {
     });
 
   return (
-    <div className={styles.editor} aria-label="참고문헌 입력">
-      {references.map((ref, i) => (
-        <div key={i} className={styles.editRow}>
-          <div className={styles.row}>
-            <KindPicker kind={ref.kind} onChange={(kind) => set(i, { kind })} />
-            <input
-              ref={(el) => (inputs.current[i] = el)}
-              className={styles.bar}
-              placeholder="저자, 제목, 연도, 페이지."
-              aria-label={`참고문헌 ${i + 1}`}
-              value={ref.text}
-              onChange={(e) => set(i, { text: e.target.value })}
-              onKeyDown={(e) => {
-                // 빈 칸에서 지우기를 한 번 더 누르면 그 줄을 없앰
-                if (e.key === 'Backspace' && !ref.text && !ref.url) {
-                  e.preventDefault();
-                  remove(i);
-                }
-              }}
-            />
-            <button
-              type="button"
-              className={`${styles.tile} ${styles.tileButton}`}
-              data-active={Boolean(ref.url) || undefined}
-              aria-expanded={linkOpen.has(i)}
-              aria-label="링크 입력"
-              title={ref.url || '링크 입력'}
-              onClick={() => toggleLink(i)}
-            >
-              <GlobeIcon />
-            </button>
+    <div ref={card} className={styles.editor} data-collapsed={collapsed || undefined} aria-label="참고문헌 입력">
+      {/* 접힌 바 전체를 누르면 다시 펼침 */}
+      {collapsed && <button type="button" className={styles.expand} aria-label="참고문헌 입력창 펼치기" onClick={() => toggle(false)} />}
+      <div className={styles.controls}>
+        <button
+          type="button"
+          className={`${styles.control} ${styles.minimize}`}
+          aria-label={collapsed ? '참고문헌 입력창 펼치기' : '참고문헌 입력창 접기'}
+          aria-expanded={!collapsed}
+          onClick={() => toggle(!collapsed)}
+        >
+          <MinimizeIcon />
+        </button>
+        <button type="button" className={`${styles.control} ${styles.close}`} aria-label="참고문헌 입력창 닫기" onClick={onClose}>
+          <CloseIcon />
+        </button>
+      </div>
+      <div className={styles.rows} inert={collapsed || undefined}>
+        {references.map((ref, i) => (
+          <div key={i} className={styles.editRow}>
+            <div className={styles.row}>
+              <KindPicker kind={ref.kind} onChange={(kind) => set(i, { kind })} />
+              <input
+                ref={(el) => (inputs.current[i] = el)}
+                className={styles.bar}
+                placeholder="저자, 제목, 연도, 페이지."
+                aria-label={`참고문헌 ${i + 1}`}
+                value={ref.text}
+                onChange={(e) => set(i, { text: e.target.value })}
+                onKeyDown={(e) => {
+                  // 빈 칸에서 지우기를 한 번 더 누르면 그 줄을 없앰.
+                  // 꾹 누르고 있을 때(반복 입력)는 글자만 지우고 줄은 남김
+                  if (e.key === 'Backspace' && !ref.text && !e.repeat) {
+                    e.preventDefault();
+                    remove(i);
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className={`${styles.tile} ${styles.tileButton}`}
+                data-active={Boolean(ref.url) || undefined}
+                aria-expanded={linkOpen.has(i)}
+                aria-label="링크 입력"
+                title={ref.url || '링크 입력'}
+                onClick={() => toggleLink(i)}
+              >
+                <GlobeIcon />
+              </button>
+            </div>
+            {linkOpen.has(i) && (
+              <input
+                className={`${styles.bar} ${styles.urlField}`}
+                type="url"
+                placeholder="https://"
+                aria-label={`참고문헌 ${i + 1} 링크`}
+                value={ref.url}
+                autoFocus
+                onChange={(e) => set(i, { url: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === 'Escape') {
+                    e.preventDefault();
+                    toggleLink(i);
+                    inputs.current[i]?.focus();
+                  }
+                }}
+              />
+            )}
           </div>
-          {linkOpen.has(i) && (
-            <input
-              className={`${styles.bar} ${styles.urlField}`}
-              type="url"
-              placeholder="https://"
-              aria-label={`참고문헌 ${i + 1} 링크`}
-              value={ref.url}
-              autoFocus
-              onChange={(e) => set(i, { url: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === 'Escape') {
-                  e.preventDefault();
-                  toggleLink(i);
-                  inputs.current[i]?.focus();
-                }
-              }}
-            />
-          )}
-        </div>
-      ))}
-      <button
-        type="button"
-        className={styles.add}
-        aria-label="참고문헌 추가"
-        onClick={() => onChange([...references, { kind: 'paper', text: '', url: '' }], references.length)}
-      >
-        <PlusIcon />
-      </button>
+        ))}
+        <button
+          type="button"
+          className={styles.add}
+          aria-label="참고문헌 추가"
+          onClick={() => onChange([...references, { kind: 'paper', text: '', url: '' }], references.length)}
+        >
+          <PlusIcon />
+        </button>
+      </div>
     </div>
   );
 }

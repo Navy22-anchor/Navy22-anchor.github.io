@@ -93,6 +93,8 @@
   flex-direction: column;
   gap: 24px;
   min-width: 0;
+  /* 화면 높이만큼 늘려서 참고문헌 입력창이 화면 아래(32px 위)에 오게 함. 77 = 상단 바, 64 = 위아래 여백 */
+  min-height: calc(100vh - 77px - 64px);
 }
 
 /* 서식 도구: 두 칸 사이 스크롤바 막대 → 마우스를 올리면 세로 도구모음 (Figma "Motion / Scrollbar → Toolbar") */
@@ -317,6 +319,11 @@
 
 /* 좁은 화면: 원본 아래에 미리보기, 도구는 예전처럼 가로 막대 */
 @media (max-width: 1000px) {
+  /* 좁은 화면에선 미리보기가 아래에 이어지므로 화면 높이까지 늘리지 않음 */
+  .editor {
+    min-height: 0;
+  }
+
   .rail,
   .rail[data-open] {
     position: sticky;
