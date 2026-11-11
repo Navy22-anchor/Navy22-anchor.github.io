@@ -1,41 +1,57 @@
-import { parseFrontMatter } from './frontMatter.js';
+import { useEffect, useState } from 'react';
+import index from 'virtual:post-index';
+import { postBody } from './postMeta.js';
 
-// 저장소의 content/posts/*.md 를 빌드할 때 읽어 들입니다. 파일 이름이 글 주소(id)가 됩니다.
+export { excerptOf } from './postMeta.js';
+
+// 저장소의 content/posts/*.md. 파일 이름이 글 주소(id)가 됩니다.
 // 새 글은 이 폴더에 .md 파일을 넣고 main에 push하면 GitHub Actions가 다시 빌드해 게시합니다.
-const files = import.meta.glob('/content/posts/*.md', { query: '?raw', import: 'default', eager: true });
+//
+// 글이 많아져도 첫 화면이 가볍도록, 빌드할 때는 목록(제목·날짜·요약 등, virtual:post-index)만 넣고
+// 본문은 글마다 따로 쪼개 두었다가 그 글을 열 때만 받아 옴
+const files = import.meta.glob('/content/posts/*.md', { query: '?raw', import: 'default' });
+const bodies = new Map(); // id → 받아 온 본문
+const pending = new Map(); // id → 받는 중인 Promise
 
-// 미리보기용: 마크다운 기호를 걷어 낸 본문 앞부분
-export function excerptOf(markdown, length = 160) {
-  const text = markdown
-    .replace(/\$\$[\s\S]*?\$\$/g, ' ')
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+/gm, '')
-    .replace(/[*_`~$]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return text.length > length ? `${text.slice(0, length)}…` : text;
+export const repoPosts = index.map((meta) => ({
+  ...meta,
+  get markdown() {
+    return bodies.get(meta.id);
+  },
+}));
+
+const isRepo = (id) => repoPosts.some((post) => post.id === id);
+const isLoaded = (id) => !isRepo(id) || bodies.has(id);
+
+export function loadRepoPost(id) {
+  if (isLoaded(id)) return Promise.resolve();
+  if (!pending.has(id)) {
+    pending.set(
+      id,
+      files[`/content/posts/${id}.md`]()
+        .then((text) => bodies.set(id, postBody(text)))
+        .finally(() => pending.delete(id)),
+    );
+  }
+  return pending.get(id);
 }
 
-// 본문의 첫 사진을 썸네일로
-const firstImage = (markdown) => /!\[[^\]]*\]\(\s*([^)\s]+)/.exec(markdown)?.[1] ?? null;
-
-export const repoPosts = Object.entries(files)
-  .map(([path, text]) => {
-    const { data, body } = parseFrontMatter(text);
-    const id = path.split('/').pop().replace(/\.md$/, '');
-    return {
-      id,
-      title: data.title || id,
-      author: data.author || '',
-      date: data.date || '',
-      category: data.category || 'AI',
-      references: Array.isArray(data.references) ? data.references : [],
-      markdown: body.trim(),
-      excerpt: data.excerpt || excerptOf(body),
-      thumbnail: data.thumbnail || firstImage(body),
+// 이 글의 본문이 준비됐는지. 아직이면 받아 오고, 다 받으면 다시 그림
+export function useRepoPostReady(id) {
+  const [, setVersion] = useState(0);
+  const ready = !id || isLoaded(id);
+  useEffect(() => {
+    if (ready) return undefined;
+    let alive = true;
+    loadRepoPost(id)
+      .catch(() => {}) // 못 받으면(오프라인 등) 빈 본문으로라도 보여줌
+      .finally(() => {
+        if (!bodies.has(id)) bodies.set(id, '');
+        if (alive) setVersion((v) => v + 1);
+      });
+    return () => {
+      alive = false;
     };
-  })
-  // 최신 글이 먼저 (날짜 형식 2026.11.08 16:11 은 문자열 비교로 정렬됨)
-  .sort((a, b) => b.date.localeCompare(a.date));
+  }, [id, ready]);
+  return ready;
+}
