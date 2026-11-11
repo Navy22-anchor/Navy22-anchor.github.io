@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { Marked } from 'marked';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import { imagesVersion, localImageUrl, subscribeImages } from '../data/localImages.js';
 import styles from './Markdown.module.css';
 
 const escapeHtml = (s) =>
@@ -42,10 +43,11 @@ const marked = new Marked({
   renderer: {
     // 글 안의 HTML은 그대로 글자로 보여 줌
     html: ({ text }) => escapeHtml(text),
-    // ![캡션](주소) → 사진 + 캡션
+    // ![캡션](주소) → 사진 + 캡션. 직접 올린 사진이 아직 이 브라우저에만 있으면 그걸 보여 줌
     image({ href, text }) {
       const caption = text ? `<figcaption>${escapeHtml(text)}</figcaption>` : '';
-      return `<figure><img src="${escapeHtml(safeUrl(href))}" alt="${escapeHtml(text)}" loading="lazy">${caption}</figure>`;
+      const src = localImageUrl(href) ?? safeUrl(href);
+      return `<figure><img src="${escapeHtml(src)}" alt="${escapeHtml(text)}" loading="lazy">${caption}</figure>`;
     },
     link({ href, tokens }) {
       const url = safeUrl(href);
@@ -61,6 +63,7 @@ const marked = new Marked({
 });
 
 export default function Markdown({ source, className = '' }) {
-  const html = useMemo(() => marked.parse(source ?? ''), [source]);
+  const images = useSyncExternalStore(subscribeImages, imagesVersion);
+  const html = useMemo(() => marked.parse(source ?? ''), [source, images]);
   return <div className={`${styles.markdown} ${className}`} dangerouslySetInnerHTML={{ __html: html }} />;
 }

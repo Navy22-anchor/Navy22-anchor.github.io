@@ -6,20 +6,21 @@ import { clearDraft, emptyDraft, formatDate, loadDraft, loadSavedDraft, postId, 
 import { findPost, toMarkdown } from '../data/posts.js';
 import { loadCategories } from '../data/categories.js';
 import { TOKEN_HELP_URL, clearToken, commitPost, loadToken, saveToken } from '../data/github.js';
+import { addImage, imageRepoPath, imagesIn, loadImageBlob } from '../data/localImages.js';
 import backIcon from '../assets/back.svg';
 import checkIcon from '../assets/check.svg';
 import styles from './Write.module.css';
 
 // Figma "Blog Post Editor" (21:38): 왼쪽 마크다운 원본, 오른쪽 읽기 미리보기
 
-// 툴바 버튼. wrap: 선택 글자를 감쌈 / prefix: 줄 앞에 붙임 / snippet: 틀을 넣고 일부를 선택
+// 툴바 버튼. wrap: 선택 글자를 감쌈 / prefix: 줄 앞에 붙임 / snippet: 틀을 넣고 일부를 선택 / upload: 사진 파일 고르기
 const TOOLS = [
   { id: 'bold', label: '굵게 (Ctrl+B)', icon: 'B', wrap: ['**', '**'], placeholder: '굵은 글자' },
   { id: 'italic', label: '기울임 (Ctrl+I)', icon: 'I', wrap: ['*', '*'], placeholder: '기울인 글자' },
   { id: 'heading', label: '소제목', icon: 'H', prefix: '## ' },
   { id: 'quote', label: '인용', icon: '❝', prefix: '> ' },
   { id: 'link', label: '링크', icon: '🔗', snippet: (sel) => [`[${sel || '링크 텍스트'}](`, 'https://', ')'] },
-  { id: 'image', label: '사진 (![캡션](주소))', icon: '▣', snippet: (sel) => [`\n![${sel || '사진 캡션'}](`, 'https://', ')\n'] },
+  { id: 'image', label: '사진 올리기 (끌어다 놓거나 붙여 넣어도 됨)', icon: '▣', upload: true },
   { id: 'list', label: '목록', icon: '≡', prefix: '- ' },
   { id: 'code', label: '코드', icon: '</>', wrap: ['`', '`'], placeholder: '코드' },
   { id: 'math', label: '수식 ($$ … $$)', icon: '∑', snippet: (sel) => ['\n$$ ', sel || 'e^{i\\pi} + 1 = 0', ' $$\n'] },
@@ -204,9 +205,10 @@ function ToolRail({ tools, onTool, onReference }) {
   );
 }
 
-// 브라우저에서 파일 내려받기
-function download(filename, text) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
+// 브라우저에서 파일 내려받기 (글자 또는 Blob)
+function download(filename, data) {
+  const blob = data instanceof Blob ? data : new Blob([data], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
   const a = Object.assign(document.createElement('a'), { href: url, download: filename });
   document.body.append(a);
   a.click();
@@ -424,6 +426,8 @@ export default function Write({ editId }) {
   const [publishError, setPublishError] = useState('');
   const pendingSelection = useRef(null);
   const statusTimer = useRef(0);
+  const fileRef = useRef(null);
+  const uploadAt = useRef(null); // 사진 고르는 창을 열 때의 커서 위치
 
   const titleRef = useAutosize(draft.title);
   const sourceRef = useAutosize(draft.markdown);
@@ -447,8 +451,43 @@ export default function Write({ editId }) {
     statusTimer.current = setTimeout(() => setStatus(''), 2500);
   };
 
+  // 사진 파일을 저장하고 커서 자리에 ![사진 캡션](/images/posts/…) 를 넣은 뒤 캡션을 선택
+  const insertImages = async (fileList, at) => {
+    const files = [...fileList].filter((file) => file.type.startsWith('image/'));
+    if (!files.length) return;
+    const el = sourceRef.current;
+    const start = at?.start ?? el.selectionStart;
+    const end = at?.end ?? el.selectionEnd;
+    flash('사진을 넣는 중…');
+    let srcs;
+    try {
+      srcs = await Promise.all(files.map(addImage));
+    } catch {
+      flash('사진을 넣지 못했어요');
+      return;
+    }
+    const caption = '사진 캡션';
+    setDraft((d) => {
+      // 사진은 앞뒤에 빈 줄을 두어 따로 한 덩어리로
+      const before = d.markdown.slice(0, start);
+      const after = d.markdown.slice(end);
+      const lead = !before || before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
+      const tail = after.startsWith('\n\n') ? '' : after.startsWith('\n') ? '\n' : '\n\n';
+      const text = lead + srcs.map((src) => `![${caption}](${src})`).join('\n\n') + tail;
+      const at = before.length + lead.length + 2;
+      pendingSelection.current = { start: at, end: at + caption.length };
+      return { ...d, markdown: before + text + after };
+    });
+    flash(files.length > 1 ? `사진 ${files.length}장을 넣었어요` : '사진을 넣었어요');
+  };
+
   const runTool = (tool) => {
     const el = sourceRef.current;
+    if (tool.upload) {
+      uploadAt.current = { start: el.selectionStart, end: el.selectionEnd };
+      fileRef.current.click();
+      return;
+    }
     const result = applyTool(tool, draft.markdown, el.selectionStart, el.selectionEnd);
     pendingSelection.current = result;
     update({ markdown: result.value });
@@ -488,7 +527,11 @@ export default function Write({ editId }) {
     setPublishing(true);
     setPublishError('');
     try {
-      await commitPost(token, pending, stringifyPost(pending));
+      // 글에 넣은 사진 중 이 브라우저에 있는 것(아직 저장소에 없을 수 있는 것)을 함께 올림
+      const images = await Promise.all(
+        imagesIn(pending.markdown).map(async (src) => ({ path: imageRepoPath(src), blob: await loadImageBlob(src) })),
+      );
+      await commitPost(token, pending, stringifyPost(pending), images.filter((image) => image.blob));
       saveToken(token);
       finishPublish(pending);
     } catch (err) {
@@ -498,9 +541,13 @@ export default function Write({ editId }) {
     }
   };
 
-  // 토큰 없이: 예전처럼 파일만 내려받음 (저장소에는 직접 올려야 함)
-  const downloadPublish = () => {
+  // 토큰 없이: 예전처럼 파일만 내려받음 (저장소에는 직접 올려야 함. 사진은 public/images/posts/ 에)
+  const downloadPublish = async () => {
     download(`${pending.id}.md`, stringifyPost(pending));
+    for (const src of imagesIn(pending.markdown)) {
+      const blob = await loadImageBlob(src);
+      if (blob) download(src.split('/').pop(), blob);
+    }
     finishPublish(pending);
   };
 
@@ -613,6 +660,28 @@ export default function Write({ editId }) {
             value={draft.markdown}
             onChange={(e) => update({ markdown: e.target.value })}
             onKeyDown={onSourceKeyDown}
+            onPaste={(e) => {
+              if (![...e.clipboardData.files].some((file) => file.type.startsWith('image/'))) return;
+              e.preventDefault();
+              insertImages(e.clipboardData.files);
+            }}
+            onDragOver={(e) => e.dataTransfer.types.includes('Files') && e.preventDefault()}
+            onDrop={(e) => {
+              if (!e.dataTransfer.files.length) return;
+              e.preventDefault();
+              insertImages(e.dataTransfer.files);
+            }}
+          />
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            multiple
+            hidden
+            onChange={(e) => {
+              insertImages(e.target.files, uploadAt.current);
+              e.target.value = '';
+            }}
           />
 
           {draft.references.length > 0 && (

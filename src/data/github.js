@@ -40,8 +40,9 @@ export class PublishError extends Error {
 }
 
 // 한글이 깨지지 않게 UTF-8 바이트로 base64
-function toBase64(text) {
-  const bytes = new TextEncoder().encode(text);
+const toBase64 = (text) => bytesToBase64(new TextEncoder().encode(text));
+
+function bytesToBase64(bytes) {
   let binary = '';
   for (let i = 0; i < bytes.length; i += 0x8000) {
     binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
@@ -49,10 +50,12 @@ function toBase64(text) {
   return btoa(binary);
 }
 
-async function request(token, path, options = {}) {
+const request = (token, path, options) => api(token, `contents/${path}`, options);
+
+async function api(token, path, options = {}) {
   let res;
   try {
-    res = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, {
+    res = await fetch(`https://api.github.com/repos/${REPO}/${path}`, {
       ...options,
       headers: {
         Accept: 'application/vnd.github+json',
@@ -73,12 +76,26 @@ async function request(token, path, options = {}) {
   return res;
 }
 
-export async function commitPost(token, { id, title }, text) {
+// 사진이 있으면 글과 사진을 한 커밋으로 (images: [{ path, blob }])
+export async function commitPost(token, { id, title }, text, images = []) {
   const path = `content/posts/${encodeURIComponent(id)}.md`;
 
   // 같은 이름의 파일이 이미 있으면 덮어쓰기 위해 sha가 필요
   const existing = await request(token, `${path}?ref=${BRANCH}`);
   const sha = existing.ok ? (await existing.json()).sha : undefined;
+
+  if (images.length) {
+    const files = await Promise.all(
+      images.map(async ({ path: imagePath, blob }) => ({
+        path: imagePath,
+        content: bytesToBase64(new Uint8Array(await blob.arrayBuffer())),
+      })),
+    );
+    return commitFiles(token, `Post : ${sha ? 'update' : 'publish'} ${title || id}`, [
+      { path: `content/posts/${id}.md`, content: toBase64(text) },
+      ...files,
+    ]);
+  }
 
   const res = await request(token, path, {
     method: 'PUT',
@@ -95,6 +112,35 @@ export async function commitPost(token, { id, title }, text) {
     throw new PublishError(`발행하지 못했습니다. (${res.status} ${detail.message ?? ''})`.trim());
   }
   return res.json();
+}
+
+async function json(res, what) {
+  if (res.ok) return res.json();
+  const detail = await res.json().catch(() => ({}));
+  throw new PublishError(`${what}하지 못했습니다. (${res.status} ${detail.message ?? ''})`.trim());
+}
+
+const post = (token, path, body, method = 'POST') =>
+  api(token, path, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+// Git Data API로 여러 파일을 한 커밋에: 파일 내용(blob) → 트리 → 커밋 → main을 새 커밋으로
+async function commitFiles(token, message, files) {
+  const blobs = await Promise.all(
+    files.map(async (file) => {
+      const { sha } = await json(await post(token, 'git/blobs', { content: file.content, encoding: 'base64' }), '파일을 올리지 못해 발행');
+      return { path: file.path, mode: '100644', type: 'blob', sha };
+    }),
+  );
+  // 그사이 다른 커밋이 올라와 main이 바뀌었으면 한 번 더 시도
+  for (let attempt = 0; ; attempt++) {
+    const ref = await json(await api(token, `git/ref/heads/${BRANCH}`), '저장소를 읽지 못해 발행');
+    const parent = ref.object.sha;
+    const { tree } = await json(await api(token, `git/commits/${parent}`), '저장소를 읽지 못해 발행');
+    const newTree = await json(await post(token, 'git/trees', { base_tree: tree.sha, tree: blobs }), '발행');
+    const commit = await json(await post(token, 'git/commits', { message, tree: newTree.sha, parents: [parent] }), '발행');
+    const res = await post(token, `git/refs/heads/${BRANCH}`, { sha: commit.sha }, 'PATCH');
+    if (res.ok || attempt === 1 || res.status !== 422) return json(res, '발행');
+  }
 }
 
 // 삭제: 저장소의 content/posts/<id>.md 를 지우는 커밋. 파일이 없으면(아직 안 올린 글) false

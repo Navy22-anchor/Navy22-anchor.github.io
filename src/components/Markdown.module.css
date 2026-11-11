@@ -98,7 +98,7 @@
 .markdown figure {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 8px; /* 캡션은 사진 바로 아래에 붙여 */
 }
 
 .markdown figure img {
