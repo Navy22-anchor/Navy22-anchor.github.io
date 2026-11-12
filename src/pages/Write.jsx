@@ -468,7 +468,7 @@ export default function Write({ editId }) {
     statusTimer.current = setTimeout(() => setStatus(''), 2500);
   };
 
-  // 사진 파일을 저장하고 커서 자리에 ![사진 캡션](/images/posts/…) 를 넣은 뒤 캡션을 선택
+  // 사진 파일을 저장하고 커서 자리에 ![](/images/posts/…) 를 넣은 뒤 커서를 캡션 칸([] 안)에 둠
   const insertImages = async (fileList, at) => {
     const files = [...fileList].filter((file) => file.type.startsWith('image/'));
     if (!files.length) return;
@@ -483,7 +483,8 @@ export default function Write({ editId }) {
       flash('사진을 넣지 못했어요');
       return;
     }
-    const caption = '사진 캡션';
+    // 캡션 칸은 비워 두고 커서를 그 안에 (번호 "사진 N."은 글에서 자동으로 붙음)
+    const caption = '';
     setDraft((d) => {
       // 사진은 앞뒤에 빈 줄을 두어 따로 한 덩어리로
       const before = d.markdown.slice(0, start);

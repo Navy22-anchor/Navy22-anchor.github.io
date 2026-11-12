@@ -87,6 +87,17 @@
   box-shadow:
     0 4px 8px rgb(0 0 0 / 0.08),
     0 16px 40px rgb(0 0 0 / 0.16);
+  cursor: grab; /* 빈 곳을 잡고 끌어 옮김 */
+  touch-action: none;
+}
+
+.editor[data-dragging],
+.editor[data-dragging] * {
+  cursor: grabbing;
+}
+
+.editor :is(input, textarea) {
+  touch-action: auto;
 }
 
 .editRow {

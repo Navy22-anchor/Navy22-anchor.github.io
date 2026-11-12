@@ -88,6 +88,52 @@ export default function ReferenceEditor({ references, onChange, focusIndex, coll
     anim.onfinish = anim.oncancel = () => delete el.dataset.animating;
   }, [collapsed]);
 
+  // 빈 곳(칸·버튼 말고)을 잡고 끌면 입력창이 따라 움직임. 화면 밖으로는 못 나감
+  // 접힌 바는 어디든 잡고 끌 수 있고, 끌었으면 놓을 때 펼쳐지지 않음
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const dragged = useRef(false);
+  const onPointerDown = (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('input, textarea, [role="menu"]')) return;
+    if (e.target.closest('button') && !e.target.closest(`.${styles.expand}`)) return;
+    const el = card.current;
+    const rect = el.getBoundingClientRect();
+    const start = { x: e.clientX, y: e.clientY };
+    const margin = 8;
+    // 지금 자리에서 더 갈 수 있는 거리
+    const limit = {
+      left: margin - rect.left,
+      right: window.innerWidth - margin - rect.right,
+      top: margin - rect.top,
+      bottom: window.innerHeight - margin - rect.bottom,
+    };
+    const clamp = (v, lo, hi) => Math.min(Math.max(v, Math.min(lo, 0)), Math.max(hi, 0));
+    dragged.current = false;
+    const move = (ev) => {
+      const dx = ev.clientX - start.x;
+      const dy = ev.clientY - start.y;
+      if (!dragged.current && Math.hypot(dx, dy) < 4) return; // 살짝 흔들린 건 누르기로 봄
+      dragged.current = true;
+      el.dataset.dragging = '';
+      setOffset({
+        x: start.x0 + clamp(dx, limit.left, limit.right),
+        y: start.y0 + clamp(dy, limit.top, limit.bottom),
+      });
+    };
+    const up = () => {
+      delete el.dataset.dragging;
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+    start.x0 = offset.x;
+    start.y0 = offset.y;
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    if (!e.target.closest('button')) e.preventDefault(); // 끄는 동안 글자가 선택되지 않게
+  };
+
   // 새 칸이나 지운 줄의 윗줄로 커서를 옮기고, 글 끝에 둠
   useEffect(() => {
     const el = focusIndex != null && inputs.current[focusIndex];
@@ -111,9 +157,26 @@ export default function ReferenceEditor({ references, onChange, focusIndex, coll
     });
 
   return (
-    <div ref={card} className={styles.editor} data-collapsed={collapsed || undefined} aria-label="참고문헌 입력">
-      {/* 접힌 바 전체를 누르면 다시 펼침 */}
-      {collapsed && <button type="button" className={styles.expand} aria-label="참고문헌 입력창 펼치기" onClick={() => toggle(false)} />}
+    <div
+      ref={card}
+      className={styles.editor}
+      data-collapsed={collapsed || undefined}
+      aria-label="참고문헌 입력"
+      style={{ translate: `${offset.x}px ${offset.y}px` }}
+      onPointerDown={onPointerDown}
+    >
+      {/* 접힌 바 전체를 누르면 다시 펼침 (끌어서 옮겼을 때는 빼고) */}
+      {collapsed && (
+        <button
+          type="button"
+          className={styles.expand}
+          aria-label="참고문헌 입력창 펼치기"
+          onClick={() => {
+            if (dragged.current) dragged.current = false;
+            else toggle(false);
+          }}
+        />
+      )}
       <div className={styles.controls}>
         <button
           type="button"
