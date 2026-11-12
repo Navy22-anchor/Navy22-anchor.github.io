@@ -20,19 +20,24 @@ const WHEEL_LOCK_MS = 280;
 // 새로 고친 뒤엔 맨 끝(마지막 줄 다음)에 붙임. skip: 지금 애니메이션으로 끼우는 중인 이름
 const same = (a, b) => a.toLowerCase() === b.toLowerCase();
 const emptyRow = (name) => ({ id: `empty-${name}`, category: name, kind: 'empty', items: [] });
-function withEmptyRows(list, names, skip) {
-  // 빈 줄과 "+"로 추가한 카테고리의 글 줄은 그 카테고리를 지우면 숨김
-  const keep = list.filter(
-    (row) =>
-      (row.kind !== 'empty' && !row.id.startsWith('posts-')) || names.some((name) => same(name, row.category)),
-  );
+// source: 처음에 만든 콘텐츠 줄 전체. 목록에서 빠졌던 글 줄은 카테고리가 다시 보이면 되살림
+// (Supabase 모드 첫 방문엔 기본 카테고리로 먼저 그렸다가 실제 목록을 받으므로, 그 사이 숨긴 글 줄이 돌아와야 함)
+function withEmptyRows(list, names, skip, source = []) {
+  // 빈 줄과 "+"로 추가한 카테고리의 글 줄은 그 카테고리가 목록에 있을 때만 보임
+  const shown = (row) =>
+    (row.kind !== 'empty' && !row.id.startsWith('posts-')) || names.some((name) => same(name, row.category));
+  const keep = list.filter(shown);
+  const back = source.filter((row) => shown(row) && !keep.some((r) => r.id === row.id));
+  const rows = [...keep, ...back];
   const missing = names.filter(
     (name) =>
       !baseCategories.some((base) => same(base, name)) &&
       !(skip && same(skip, name)) &&
-      !keep.some((row) => same(row.category, name)),
+      !rows.some((row) => same(row.category, name)),
   );
-  return keep.length === list.length && missing.length === 0 ? list : [...keep, ...missing.map(emptyRow)];
+  return keep.length === list.length && back.length === 0 && missing.length === 0
+    ? list
+    : [...rows, ...missing.map(emptyRow)];
 }
 
 const startIndex = (row) => Math.floor((row.items.length - 1) / 2) * (row.kind === 'posts' ? 0 : 1);
@@ -44,8 +49,8 @@ export default function Landing() {
   const [insertingName, setInsertingName] = useState(null); // 빈 줄을 끼우는 중인 카테고리 이름
   // 카테고리 목록이 바뀌면(다른 컴퓨터에서 추가·삭제 포함) 빈 줄도 맞춤
   useEffect(() => {
-    setRows((list) => withEmptyRows(list, categories, insertingName));
-  }, [categories, insertingName]);
+    setRows((list) => withEmptyRows(list, categories, insertingName, loadedRows));
+  }, [categories, insertingName, loadedRows]);
   const editable = useCanEdit(); // 카테고리 추가·삭제는 주인(로그인)만
   const [category, setCategory] = useState(categories[0]);
   const [adding, setAdding] = useState(false); // "+"를 눌러 새 카테고리 이름을 입력하는 중
@@ -64,6 +69,15 @@ export default function Landing() {
     const i = rows.findIndex((row) => row.category === name);
     if (i !== -1) stripRef.current?.goTo(i);
   };
+  const pendingGoTo = useRef(null);
+  useEffect(() => {
+    const name = pendingGoTo.current;
+    const i = name ? rows.findIndex((row) => same(row.category, name)) : -1;
+    if (i === -1) return;
+    pendingGoTo.current = null;
+    stripRef.current?.goTo(i);
+  }, [rows]);
+
   // 삭제 모드에서 카테고리를 누르면 확인 카드부터
   const onCategoryClick = (name) => {
     if (removing) setConfirming(name);
@@ -74,6 +88,11 @@ export default function Landing() {
   const insertCategory = (name) => {
     setCategory(name);
     if (rows.some((row) => row.category === name)) return goToCategory(name);
+    // 숨겼다가 다시 추가한 카테고리라 글 줄이 있으면 빈 줄 대신 그 글 줄이 돌아옴 → 돌아오면 그리로 이동
+    if (loadedRows.some((row) => same(row.category, name))) {
+      pendingGoTo.current = name;
+      return;
+    }
     const row = emptyRow(name);
     setInsertingName(name);
     stripRef.current?.insert(row, (at) => {
