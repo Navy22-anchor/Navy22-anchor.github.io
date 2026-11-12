@@ -11,6 +11,15 @@ const EASE = 0.18;
 const MOBILE = 700;
 const MOBILE_POST_H = 160;
 
+// 새 카테고리 빈 줄 (Figma 157:1507 애니메이션): 빈 중괄호 높이, 빈 중괄호 간격(가운데에서 810 → 960 = 150)
+const EMPTY_H = 173;
+const EMPTY_BRACE = 150;
+// 1) 0~650ms 중괄호 자리의 줄과 그 아래 줄들이 한 칸씩 내려감
+// 2) 300~650ms 빈 중괄호 간격이 좁아짐. 둘 다 같은 때 끝남 (라벨 바뀜은 Landing.module.css에서 같은 시간으로)
+export const INSERT_MS = 650;
+const INSERT_BRACE_FROM = 300 / INSERT_MS;
+const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+
 const mod = (a, n) => ((a % n) + n) % n;
 const lerp = (a, b, t) => a + (b - a) * t;
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -20,8 +29,8 @@ function readViewport() {
   return { w: window.innerWidth, h: window.innerHeight, focus: (parseFloat(value) / 100) * window.innerHeight };
 }
 
-// 중괄호와 가운데 콘텐츠 사이 거리 (Figma: 글 카드 369, 책 258)
-const braceOffset = (w) => Math.max(w / 2 + 49, 258);
+// 중괄호와 가운데 콘텐츠 사이 거리 (Figma: 글 카드 369, 책 258, 빈 줄 150)
+const braceOffset = ({ row, w }) => (row.kind === 'empty' ? EMPTY_BRACE : Math.max(w / 2 + 49, 258));
 
 export default function ProjectStrip({ ref, rows, initialRow = 0, indexFor, onActiveChange, onChangeItem, onOpen }) {
   const n = rows.length;
@@ -31,10 +40,13 @@ export default function ProjectStrip({ ref, rows, initialRow = 0, indexFor, onAc
   const frame = useRef(0);
   const settleTimer = useRef(0);
   const rootRef = useRef(null);
+  const [inserting, setInserting] = useState(null); // 빈 줄을 끼우는 중 { row, t: 0~1 }
+  const insertingRef = useRef(false);
 
   const size = useCallback(
     (k) => {
       const row = rows[mod(k, n)];
+      if (row.kind === 'empty') return { row, w: 0, h: viewport.w > MOBILE ? EMPTY_H : MOBILE_POST_H };
       const { w, h } = centerSize(row, indexFor(row));
       if (viewport.w > MOBILE) return { row, w, h };
       if (row.kind === 'posts') return { row, w, h: MOBILE_POST_H };
@@ -53,6 +65,7 @@ export default function ProjectStrip({ ref, rows, initialRow = 0, indexFor, onAc
   };
 
   const animateTo = useCallback((target) => {
+    if (insertingRef.current) return; // 빈 줄을 끼우는 동안은 다른 움직임을 받지 않음
     cancelAnimationFrame(frame.current);
     clearTimeout(settleTimer.current);
     if (reducedMotion()) return apply(target);
@@ -68,6 +81,7 @@ export default function ProjectStrip({ ref, rows, initialRow = 0, indexFor, onAc
   // px만큼 굴리면 지금 간격 기준으로 그만큼 줄이 이동하고, 멈추면 가장 가까운 줄로 맞춤
   const moveBy = useCallback(
     (px) => {
+      if (insertingRef.current) return;
       cancelAnimationFrame(frame.current);
       const p = posRef.current;
       apply(p + px / distance(Math.floor(p)));
@@ -82,10 +96,35 @@ export default function ProjectStrip({ ref, rows, initialRow = 0, indexFor, onAc
     ref,
     () => ({
       goTo(index) {
+        if (insertingRef.current) return;
         const current = Math.round(posRef.current);
         let delta = mod(index - current, n);
         if (delta > n / 2) delta -= n;
         animateTo(current + delta);
+      },
+      // 새 카테고리: 중괄호 자리에 빈 줄을 끼움. 움직임이 끝나면 onInsert(줄 번호)로 rows에 실제로 넣게 함
+      insert(row, onInsert) {
+        if (insertingRef.current) return;
+        cancelAnimationFrame(frame.current);
+        clearTimeout(settleTimer.current);
+        const at = mod(Math.round(posRef.current), n);
+        const done = () => {
+          insertingRef.current = false;
+          setInserting(null);
+          apply(at); // 끼운 빈 줄(rows[at])이 중괄호에
+          onInsert(at);
+        };
+        if (reducedMotion()) return done();
+        insertingRef.current = true;
+        apply(Math.round(posRef.current));
+        const start = performance.now();
+        const step = (now) => {
+          const t = Math.min(1, (now - start) / INSERT_MS);
+          setInserting({ row, t });
+          if (t < 1) frame.current = requestAnimationFrame(step);
+          else done();
+        };
+        frame.current = requestAnimationFrame(step);
       },
     }),
     [n, animateTo],
@@ -107,6 +146,7 @@ export default function ProjectStrip({ ref, rows, initialRow = 0, indexFor, onAc
     };
     const onKey = (e) => {
       if (e.target.closest?.('input, textarea, [role="dialog"]')) return; // 글자 입력·달력 사용 중에는 넘기지 않음
+      if (insertingRef.current) return;
       // ↓는 휠을 내릴 때와 같은 방향
       if (e.key === 'ArrowDown') animateTo(Math.round(posRef.current) + WHEEL_DIRECTION);
       else if (e.key === 'ArrowUp') animateTo(Math.round(posRef.current) - WHEEL_DIRECTION);
@@ -153,7 +193,19 @@ export default function ProjectStrip({ ref, rows, initialRow = 0, indexFor, onAc
   // 중괄호 간격을 중괄호 사이 줄의 크기에 맞춤 (줄 사이를 지날 때는 부드럽게 보간)
   const base = Math.floor(pos);
   const frac = pos - base;
-  const brace = lerp(braceOffset(size(base).w), braceOffset(size(base + 1).w), frac);
+  let brace = lerp(braceOffset(size(base)), braceOffset(size(base + 1)), frac);
+  // 빈 줄을 끼우는 중: 중괄호 자리 줄부터 아래 줄들은 한 칸(빈 줄 + 간격)만큼 내려가고,
+  // 위 줄들은 지금 줄과 빈 줄의 높이 차이의 절반만큼만 움직여서 다 끼운 뒤의 자리와 맞음 (빈 줄이 낮으면 살짝 아래로)
+  let shiftDown = 0;
+  let shiftUp = 0;
+  if (inserting) {
+    const p = easeInOut(inserting.t);
+    const empty = viewport.w > MOBILE ? EMPTY_H : MOBILE_POST_H;
+    shiftDown = p * (empty / 2 + GAP + size(base).h / 2);
+    shiftUp = (p * (size(base).h - empty)) / 2;
+    const b = easeInOut(Math.max(0, (inserting.t - INSERT_BRACE_FROM) / (1 - INSERT_BRACE_FROM)));
+    brace = lerp(brace, EMPTY_BRACE, b);
+  }
   useLayoutEffect(() => {
     document.documentElement.style.setProperty('--brace-offset', `${brace}px`);
   }, [brace]);
@@ -173,13 +225,14 @@ export default function ProjectStrip({ ref, rows, initialRow = 0, indexFor, onAc
     <div ref={rootRef} className={styles.viewport} aria-label="작업 목록">
       {items.map(({ k, y }) => {
         const { row, h } = size(k);
+        const top = y - h / 2 + (k >= base ? shiftDown : shiftUp);
         const reveal = Math.max(0, 1 - Math.abs(k - pos) * 2); // 반 줄 이상 벗어나면 가운데 것만
         const isActive = k === Math.round(pos);
         return (
           <div
             key={k}
             className={styles.row}
-            style={{ height: h, transform: `translateY(${y - h / 2}px)`, zIndex: isActive ? 2 : 1 }}
+            style={{ height: h, transform: `translateY(${top}px)`, zIndex: isActive ? 2 : 1 }}
             aria-hidden={!isActive || undefined}
             onClickCapture={(e) => {
               // 중괄호 밖의 줄을 누르면 그 줄을 중괄호로 가져옴
@@ -189,13 +242,15 @@ export default function ProjectStrip({ ref, rows, initialRow = 0, indexFor, onAc
               }
             }}
           >
-            <RowCarousel
-              row={row}
-              index={indexFor(row)}
-              reveal={reveal}
-              onChange={(i) => onChangeItem(row, i)}
-              onOpen={onOpen}
-            />
+            {row.kind !== 'empty' && (
+              <RowCarousel
+                row={row}
+                index={indexFor(row)}
+                reveal={reveal}
+                onChange={(i) => onChangeItem(row, i)}
+                onOpen={onOpen}
+              />
+            )}
           </div>
         );
       })}

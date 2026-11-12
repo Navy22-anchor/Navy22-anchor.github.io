@@ -273,3 +273,32 @@
   .tags { left: var(--edge); }
   .index { right: 16px; }
 }
+
+/* 새 카테고리 빈 줄을 끼울 때 라벨 바뀜 (ProjectStrip INSERT_MS 650ms와 같은 때 끝남)
+   원래 이름은 0~650ms에 사라지고, 새 이름은 300~650ms에 나타남 */
+.fadeOut {
+  animation: labelOut 650ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+.fadeIn {
+  opacity: 0;
+  animation: labelIn 350ms cubic-bezier(0.65, 0, 0.35, 1) 300ms forwards;
+}
+
+@keyframes labelOut {
+  to { opacity: 0; }
+}
+
+@keyframes labelIn {
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fadeOut,
+  .fadeIn {
+    animation: none;
+  }
+
+  .fadeOut { opacity: 0; }
+  .fadeIn { opacity: 1; }
+}

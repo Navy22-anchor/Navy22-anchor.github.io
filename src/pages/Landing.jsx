@@ -5,7 +5,7 @@ import DynamicIsland from '../components/DynamicIsland.jsx';
 import ProjectStrip from '../components/ProjectStrip.jsx';
 import { addCategory, loadCategories, removeCategory, useCategories } from '../data/categories.js';
 import { useCanEdit } from '../data/supabase.js';
-import { loadRows } from '../data/projects.js';
+import { categories as baseCategories, loadRows } from '../data/projects.js';
 import braceLeft from '../assets/brace-left.svg';
 import braceRight from '../assets/brace-right.svg';
 import styles from './Landing.module.css';
@@ -15,11 +15,37 @@ const WHEEL_STEP = 60;
 const WHEEL_LOCK_MS = 280;
 
 // 처음엔 가운데 콘텐츠가 보이도록 (양옆이 모두 보이게)
+// 콘텐츠가 아직 없는 카테고리("+"로 추가한 것)는 빈 줄(빈 중괄호 칸)로 둠. 그 카테고리로 글을 발행하면 글 줄로 바뀜
+// 줄은 콘텐츠로만 만들어지므로, 카테고리 목록을 보고 빈 줄을 더하고 지운 카테고리의 빈 줄은 뺌
+// 새로 고친 뒤엔 맨 끝(마지막 줄 다음)에 붙임. skip: 지금 애니메이션으로 끼우는 중인 이름
+const same = (a, b) => a.toLowerCase() === b.toLowerCase();
+const emptyRow = (name) => ({ id: `empty-${name}`, category: name, kind: 'empty', items: [] });
+function withEmptyRows(list, names, skip) {
+  // 빈 줄과 "+"로 추가한 카테고리의 글 줄은 그 카테고리를 지우면 숨김
+  const keep = list.filter(
+    (row) =>
+      (row.kind !== 'empty' && !row.id.startsWith('posts-')) || names.some((name) => same(name, row.category)),
+  );
+  const missing = names.filter(
+    (name) =>
+      !baseCategories.some((base) => same(base, name)) &&
+      !(skip && same(skip, name)) &&
+      !keep.some((row) => same(row.category, name)),
+  );
+  return keep.length === list.length && missing.length === 0 ? list : [...keep, ...missing.map(emptyRow)];
+}
+
 const startIndex = (row) => Math.floor((row.items.length - 1) / 2) * (row.kind === 'posts' ? 0 : 1);
 
 export default function Landing() {
-  const [{ rows, initialRow }] = useState(loadRows);
+  const [{ rows: loadedRows, initialRow }] = useState(loadRows);
+  const [rows, setRows] = useState(() => withEmptyRows(loadedRows, loadCategories()));
   const categories = useCategories();
+  const [insertingName, setInsertingName] = useState(null); // 빈 줄을 끼우는 중인 카테고리 이름
+  // 카테고리 목록이 바뀌면(다른 컴퓨터에서 추가·삭제 포함) 빈 줄도 맞춤
+  useEffect(() => {
+    setRows((list) => withEmptyRows(list, categories, insertingName));
+  }, [categories, insertingName]);
   const editable = useCanEdit(); // 카테고리 추가·삭제는 주인(로그인)만
   const [category, setCategory] = useState(categories[0]);
   const [adding, setAdding] = useState(false); // "+"를 눌러 새 카테고리 이름을 입력하는 중
@@ -44,6 +70,21 @@ export default function Landing() {
     else goToCategory(name);
   };
 
+  // 새 카테고리: 중괄호 자리에 빈 줄을 끼우는 애니메이션 (이미 줄이 있는 카테고리면 그 줄로 이동만)
+  const insertCategory = (name) => {
+    setCategory(name);
+    if (rows.some((row) => row.category === name)) return goToCategory(name);
+    const row = emptyRow(name);
+    setInsertingName(name);
+    stripRef.current?.insert(row, (at) => {
+      setRows((list) => {
+        const rest = list.filter((r) => r.id !== row.id);
+        return [...rest.slice(0, at), row, ...rest.slice(at)];
+      });
+      setInsertingName(null);
+    });
+  };
+
   const confirmRemove = () => {
     removeCategory(confirming);
     const next = loadCategories();
@@ -65,7 +106,7 @@ export default function Landing() {
   }, [active.category]);
   const indexFor = useCallback((row) => indexes[row.id] ?? startIndex(row), [indexes]);
   const itemIndex = indexFor(active);
-  const item = active.items[itemIndex];
+  const item = active.items[itemIndex]; // 빈 줄이면 없음
 
   const changeItem = useCallback((row, next) => {
     setIndexes((prev) => ({ ...prev, [row.id]: Math.max(0, Math.min(row.items.length - 1, next)) }));
@@ -122,7 +163,20 @@ export default function Landing() {
           <DynamicIsland />
         </div>
 
-        <a href="#/write" className={`${styles.plainLink} ${styles.writeNav}`}>글쓰기</a>
+        {/* 지금 고른 카테고리를 글쓰기 화면의 기본 카테고리로 (빈 칸의 카테고리에서 누르면 그 카테고리로 발행) */}
+        <a
+          href="#/write"
+          className={`${styles.plainLink} ${styles.writeNav}`}
+          onClick={() => {
+            try {
+              sessionStorage.setItem('hanlog:write-category', category ?? '');
+            } catch {
+              // 저장소를 못 쓰면 첫 카테고리가 기본
+            }
+          }}
+        >
+          글쓰기
+        </a>
       </header>
 
       <ul className={styles.categories} aria-label="카테고리" data-removing={removing || undefined}>
@@ -171,8 +225,8 @@ export default function Landing() {
                   if (e.key === 'Escape') setAdding(false);
                   if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
                   const name = addCategory(e.currentTarget.value);
-                  if (name) setCategory(name);
                   setAdding(false);
+                  if (name) insertCategory(name);
                 }}
                 onBlur={() => setAdding(false)}
               />
@@ -196,13 +250,21 @@ export default function Landing() {
       {confirming && <ConfirmDialog onConfirm={confirmRemove} onClose={() => setConfirming(null)} />}
 
       <div className={styles.focus}>
-        <p className={styles.tags} aria-live="polite">{active.category}</p>
+        {/* 빈 줄을 끼우는 동안: 원래 이름은 흐려지며 사라지고 새 이름이 나타남 (ProjectStrip INSERT_MS와 같은 시간) */}
+        <p className={`${styles.tags} ${insertingName ? styles.fadeOut : ''}`} aria-live="polite">
+          {active.category}
+        </p>
+        {insertingName && (
+          <p className={`${styles.tags} ${styles.fadeIn}`} aria-hidden="true">
+            {insertingName}
+          </p>
+        )}
         <img className={styles.braceLeft} src={braceLeft} alt="" width="71" height="173" />
         <img className={styles.braceRight} src={braceRight} alt="" width="71" height="173" />
-        <p className={styles.roles} aria-live="polite">
-          {active.kind === 'posts' ? `${item.title}, ${item.date}` : item.label}
+        <p className={`${styles.roles} ${insertingName ? styles.fadeOut : ''}`} aria-live="polite">
+          {!item ? '' : active.kind === 'posts' ? `${item.title}, ${item.date}` : item.label}
         </p>
-        <p className={styles.index}>{itemIndex + 1}</p>
+        <p className={`${styles.index} ${insertingName ? styles.fadeOut : ''}`}>{item ? itemIndex + 1 : ''}</p>
       </div>
 
       <main className={styles.main}>
