@@ -417,6 +417,18 @@ function loadEditDraft(id) {
   };
 }
 
+// 새 글의 기본 카테고리: 랜딩에서 고른 카테고리(글쓰기를 누를 때 남김), 없으면 첫 카테고리
+function defaultCategory() {
+  const list = loadCategories();
+  let picked = null;
+  try {
+    picked = sessionStorage.getItem('hanlog:write-category');
+  } catch {
+    // 저장소를 못 쓰면 첫 카테고리
+  }
+  return list.find((name) => name === picked) ?? list[0];
+}
+
 export default function Write({ editId }) {
   // 수정이면 원래 글의 id(파일 이름)·날짜·카테고리를 그대로 두고 내용만 덮어씀
   const [original] = useState(() => (editId ? findPost(editId) : null));
@@ -513,7 +525,7 @@ export default function Write({ editId }) {
     setPending(
       original
         ? { ...draft, references, id: original.id, date: original.date || formatDate(date), category: original.category || loadCategories()[0] }
-        : { ...draft, references, id: postId(date), date: formatDate(date), category: loadCategories()[0] },
+        : { ...draft, references, id: postId(date), date: formatDate(date), category: defaultCategory() },
     );
   };
 
