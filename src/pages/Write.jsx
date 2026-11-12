@@ -534,8 +534,12 @@ export default function Write({ editId }) {
     publishPost(post);
     clearDraft(original?.id);
     // 수정이면 편집 화면을 기록에서 지워, 글에서 뒤로가기 하면 수정 전 화면으로 돌아오지 않게
+    // 새 글이면 글쓰기 화면 기록을 홈으로 바꿔 두어, 발행한 글에서 뒤로가기 하면 홈으로 가게
     if (original) window.location.replace(`#/post/${post.id}`);
-    else window.location.hash = `#/post/${post.id}`;
+    else {
+      window.history.replaceState(null, '', '#/');
+      window.location.hash = `#/post/${post.id}`;
+    }
   };
 
   // 발행: GitHub 저장소에 content/posts/<id>.md 로 커밋
