@@ -43,9 +43,12 @@ const marked = new Marked({
   renderer: {
     // 글 안의 HTML은 그대로 글자로 보여 줌
     html: ({ text }) => escapeHtml(text),
-    // ![캡션](주소) → 사진 + 캡션. 직접 올린 사진이 아직 이 브라우저에만 있으면 그걸 보여 줌
+    // ![캡션](주소) → 사진 + "사진 N. 캡션". 번호는 글 안의 순서대로 자동 (캡션이 비어 있으면 "사진 N"만)
+    // 직접 올린 사진이 아직 이 브라우저에만 있으면 그걸 보여 줌
     image({ href, text }) {
-      const caption = text ? `<figcaption>${escapeHtml(text)}</figcaption>` : '';
+      photoCount += 1;
+      const label = `<span class="${styles.photoNumber}">사진 ${photoCount}${text ? '.' : ''}</span>`;
+      const caption = `<figcaption>${label}${text ? ` ${escapeHtml(text)}` : ''}</figcaption>`;
       const src = localImageUrl(href) ?? safeUrl(href);
       return `<figure><img src="${escapeHtml(src)}" alt="${escapeHtml(text)}" loading="lazy">${caption}</figure>`;
     },
@@ -62,8 +65,14 @@ const marked = new Marked({
   },
 });
 
+// 지금 그리는 글에서 몇 번째 사진인지
+let photoCount = 0;
+
 export default function Markdown({ source, className = '' }) {
   const images = useSyncExternalStore(subscribeImages, imagesVersion);
-  const html = useMemo(() => marked.parse(source ?? ''), [source, images]);
+  const html = useMemo(() => {
+    photoCount = 0; // 글마다 사진 1부터
+    return marked.parse(source ?? '');
+  }, [source, images]);
   return <div className={`${styles.markdown} ${className}`} dangerouslySetInnerHTML={{ __html: html }} />;
 }

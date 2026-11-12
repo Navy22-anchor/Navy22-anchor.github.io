@@ -98,7 +98,7 @@
 .markdown figure {
   display: flex;
   flex-direction: column;
-  align-items: flex-start; /* 사진을 글 폭으로 늘리지 않음 */
+  align-items: center; /* 사진을 글 폭으로 늘리지 않고 가운데에 */
   gap: 8px; /* 캡션은 사진 바로 아래에 붙여 */
 }
 
@@ -109,7 +109,13 @@
   height: auto;
 }
 
+/* 캡션 앞의 자동 번호 "사진 N." */
+.photoNumber {
+  font-weight: 600;
+}
+
 .markdown figcaption {
+  text-align: center; /* 여러 줄 캡션도 사진 아래 가운데 */
   font-size: 14px;
   line-height: 1.5;
 }
