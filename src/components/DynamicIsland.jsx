@@ -293,13 +293,17 @@ export default function DynamicIsland({
       .catch(() => start(t.previewUrl));
   };
 
-  // 타이머: 그 줄 높이에 맞춰 아일랜드 왼쪽에 달력을 펼침. 같은 곡을 다시 누르면 닫힘
+  // 타이머: 날짜 알약을 눌렀을 때 달력이 뜨는 자리(알약 6px 아래, 오른쪽 끝 맞춤)에 달력을 펼침
+  // 날짜 알약이 없는 화면이면 그 줄 높이에 맞춰 아일랜드 왼쪽에. 같은 곡을 다시 누르면 닫힘
   const openSchedule = (r, button) => {
     const root = rootRef.current;
     const rect = root.getBoundingClientRect();
     const scale = rect.width / root.offsetWidth || 1; // 랜딩에서 아일랜드를 70%로 줄여 그림
-    const top = (button.closest('li').getBoundingClientRect().top - rect.top) / scale;
-    setScheduling((cur) => (cur?.track.id === r.id ? null : { track: r, top, button }));
+    const anchor = document.querySelector('[data-calendar-anchor]')?.getBoundingClientRect();
+    const place = anchor
+      ? { top: (anchor.bottom + 6 - rect.top) / scale, right: (rect.right - anchor.right) / scale }
+      : { top: (button.closest('li').getBoundingClientRect().top - rect.top) / scale };
+    setScheduling((cur) => (cur?.track.id === r.id ? null : { track: r, place, button }));
   };
   const closeSchedule = () => {
     const button = scheduling?.button;
@@ -546,7 +550,7 @@ export default function DynamicIsland({
         <ScheduleCalendar
           key={scheduling.track.id}
           className={styles.scheduler}
-          style={{ top: scheduling.top, ...(pickColor && { '--dt-red': pickColor }) }}
+          style={{ ...scheduling.place, ...(pickColor && { '--dt-red': pickColor }) }}
           label={scheduling.track.title}
           marks={scheduleMarks(schedules)}
           onConfirm={addSchedule}

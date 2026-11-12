@@ -517,7 +517,8 @@ export default function DateTime({ className = '' }) {
   }, [open]);
 
   return (
-    <div ref={rootRef} className={`${styles.dateTime} ${className}`}>
+    // data-calendar-anchor: 노래 예약 달력(DynamicIsland)도 이 달력이 뜨는 자리(알약 바로 아래, 오른쪽 끝 맞춤)에 띄움
+    <div ref={rootRef} className={`${styles.dateTime} ${className}`} data-calendar-anchor>
       <button
         type="button"
         className={`${styles.pill} ${styles.dateButton}`}
