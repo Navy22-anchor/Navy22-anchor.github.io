@@ -98,15 +98,15 @@
 .markdown figure {
   display: flex;
   flex-direction: column;
+  align-items: flex-start; /* 사진을 글 폭으로 늘리지 않음 */
   gap: 8px; /* 캡션은 사진 바로 아래에 붙여 */
 }
 
+/* 사진은 원본 크기 그대로 (글 폭보다 넓을 때만 글 폭에 맞춰 줄임) */
 .markdown figure img {
   display: block;
-  width: 100%;
+  max-width: 100%;
   height: auto;
-  min-height: 120px;
-  background: var(--md-placeholder);
 }
 
 .markdown figcaption {
