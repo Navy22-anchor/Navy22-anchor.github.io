@@ -1,42 +1,66 @@
+/* Figma "Login page (1440)" (247:2825). 상단 바는 글 읽기 화면(203:2393)과 같은 간격 */
+
 .page {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 16px;
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-sans);
-}
-
-.back {
-  position: fixed;
-  top: 20px;
-  left: 30px;
-  color: inherit;
-  text-decoration: none;
-}
-
-.back:hover {
-  text-decoration: underline;
-}
-
-.card {
-  width: min(320px, 100%);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
 }
 
-.heading {
+/* ── 상단 바: 1440 × 77, 위아래 20 · 좌우 32 ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 32px;
+}
+
+/* 양옆 묶음을 같은 너비(64)로 두어 가운데 알약이 항상 정가운데 */
+.headerSide {
+  display: flex;
+  gap: 16px;
+  width: 64px;
+}
+
+.iconButton {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.iconButton img {
+  display: block;
+  filter: var(--color-icon-filter);
+}
+
+.pill {
   margin: 0;
-  font-size: 20px;
-  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--color-fill);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* ── 입력 칸: 320 폭, 가로 가운데. Figma(900 높이)에서 칸 묶음 위 끝 y 342 ──
+   상단 바(77) 아래 남은 공간의 가운데에서 아래 여백 161만큼 위로 → (77 + 900 − 161) / 2 = 408 = 342 + 132 / 2 */
+.main {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 0 16px 161px;
 }
 
 .form {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: min(320px, 100%);
 }
 
 .field {
@@ -44,17 +68,19 @@
   flex-direction: column;
   gap: 6px;
   font-size: 13px;
+  line-height: 16px;
   color: var(--color-secondary);
 }
 
 .field input {
-  padding: 9px 12px;
+  padding: 10px 12px;
   border: none;
   border-radius: 8px;
   background: var(--color-fill);
   color: var(--color-text);
   font: inherit;
   font-size: 15px;
+  line-height: 18px; /* 칸 높이 38 (Figma) */
 }
 
 .field input:focus-visible {
@@ -62,39 +88,22 @@
   outline-offset: 1px;
 }
 
-.button {
-  align-self: flex-start;
-  padding: 8px 20px;
-  border: none;
-  border-radius: 999px;
-  background: var(--color-accent);
-  color: var(--color-white);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 21px;
-  cursor: pointer;
-}
-
-.button:disabled {
+.field input:disabled {
   opacity: 0.6;
-  cursor: default;
-}
-
-.note {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--color-secondary);
-}
-
-.note strong {
-  color: var(--color-text);
-  font-weight: 600;
 }
 
 .error {
-  margin: 0;
+  margin: 4px 0 0;
   font-size: 14px;
   color: var(--color-error);
+}
+
+/* 화면에는 안 보이지만 Enter 제출과 화면 읽기 프로그램을 위해 둠 */
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
