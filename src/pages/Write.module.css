@@ -448,6 +448,17 @@
   white-space: nowrap;
 }
 
+/* 발행 창의 "발행" 버튼: 짙은 초록 바탕에 흰 글자 (토큰이 없어 못 누를 때는 흐리게) */
+.dialogButton.primary {
+  background: rgb(0 36 27);
+  color: var(--color-white);
+}
+
+.dialogButton.primary:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* 카테고리: 화살표 없는 알약, 누르면 아래로 목록 */
 .category {
   position: relative;
