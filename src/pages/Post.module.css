@@ -67,16 +67,19 @@
   white-space: nowrap;
 }
 
-/* ── 본문: 가운데 680 열, 오른쪽에 참고문헌 ── */
+/* ── 본문: 가운데 880 열 (긴 수식·사진이 한 줄에 들어가게 680에서 넓힘), 오른쪽에 참고문헌 ── */
 .content {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 680px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 880px) minmax(0, 1fr);
   row-gap: 24px;
   padding: 96px 20px;
 }
 
 .article,
 .faq {
+  /* 긴 수식 블록이 늘어날 수 있는 최대 폭: 화면 양옆 여백 28px씩 (세로 스크롤바 몫 포함) */
+  --md-wide-max: calc(100vw - 56px);
+
   grid-column: 2;
   display: flex;
   flex-direction: column;

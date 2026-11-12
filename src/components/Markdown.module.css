@@ -109,6 +109,16 @@
   height: auto;
 }
 
+/* 글 안에 직접 쓴 <img>. align="left/right"로 띄운 사진이 그 문단(묶음) 안에 머물게 */
+.htmlBlock,
+.markdown > p {
+  display: flow-root;
+}
+
+.markdown img:not(figure img) {
+  max-width: 100%;
+}
+
 /* 캡션 앞의 자동 번호 "사진 N." */
 .photoNumber {
   font-weight: 600;
@@ -121,7 +131,17 @@
 }
 
 /* $$ 수식 $$ 블록 (Figma "Formula block") */
+/* 긴 수식은 한 줄을 한 번에 보게 본문 폭 밖으로 양옆 똑같이 늘어남 (--md-wide-max까지, 그보다 길면 가로 스크롤)
+   짧은 수식은 지금처럼 본문 폭 */
 .math {
+  /* 인용·목록 안에 있어도 그 칸의 가운데를 기준으로 양옆 똑같이 */
+  position: relative;
+  left: 50%;
+  translate: -50%;
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 100%;
+  max-width: var(--md-wide-max, 100%);
   padding: 20px 16px;
   border-radius: 8px;
   background: var(--md-surface);

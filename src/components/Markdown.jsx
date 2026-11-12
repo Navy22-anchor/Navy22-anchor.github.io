@@ -11,6 +11,54 @@ const escapeHtml = (s) =>
 // javascript: 같은 위험한 주소는 막음
 const safeUrl = (href = '') => (/^\s*(javascript|vbscript|data:(?!image\/))/i.test(href) ? '#' : href);
 
+// 글 안의 HTML은 안전한 것만 살림 (나머지 태그·속성은 글자로 보여 줌)
+//   <img src width height align alt>  : 사진 주소는 https:// 이거나 이 사이트(/로 시작)만
+//   <span style="color: …">           : 글자 색만
+//   <br>
+const ATTR = /([a-zA-Z-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g;
+const SIZE = /^\d+(\.\d+)?(%|px)?$/;
+const ALIGN = /^(left|right|center|middle|top|bottom)$/i;
+const COLOR = /^(#[0-9a-f]{3,8}|[a-z]+|(rgb|rgba|hsl|hsla)\([\d\s.,%/]+\))$/i;
+
+function attrsOf(source) {
+  const attrs = {};
+  for (const m of source.matchAll(ATTR)) attrs[m[1].toLowerCase()] = m[2] ?? m[3] ?? m[4] ?? '';
+  return attrs;
+}
+
+function safeTag(tag) {
+  const m = /^<(\/?)([a-zA-Z]+)([^>]*?)\/?>$/.exec(tag);
+  if (!m) return null;
+  const [, closing, rawName, rest] = m;
+  const name = rawName.toLowerCase();
+  if (name === 'br' && !closing) return '<br>';
+  if (name === 'span') {
+    if (closing) return '</span>';
+    const color = /(?:^|;)\s*color\s*:\s*([^;]+)/i.exec(attrsOf(rest).style ?? '')?.[1].trim();
+    return color && COLOR.test(color) ? `<span style="color: ${color}">` : '<span>';
+  }
+  if (name === 'img' && !closing) {
+    const a = attrsOf(rest);
+    const src = (a.src ?? '').trim();
+    if (!/^(https:\/\/|\/(?!\/))/i.test(src)) return null;
+    let out = `<img src="${escapeHtml(localImageUrl(src) ?? src)}" alt="${escapeHtml(a.alt ?? '')}" loading="lazy"`;
+    if (SIZE.test(a.width ?? '')) out += ` width="${a.width}"`;
+    // % 높이는 뺌: 본문(flex 칸)에서는 문단 높이에 대한 %로 계산돼 사진 아래에 큰 빈칸이 생김.
+    // velog처럼 폭과 사진 비율로 높이를 정함
+    if (SIZE.test(a.height ?? '') && !a.height.endsWith('%')) out += ` height="${a.height}"`;
+    if (ALIGN.test(a.align ?? '')) out += ` align="${a.align.toLowerCase()}"`;
+    return `${out}>`;
+  }
+  return null;
+}
+
+// 태그마다 안전한지 보고, 아니면 글자로. 태그 밖 글자도 그대로 글자로
+const safeHtml = (text) =>
+  text
+    .split(/(<[^<>]*>)/)
+    .map((part) => (part.startsWith('<') ? (safeTag(part) ?? escapeHtml(part)) : escapeHtml(part)))
+    .join('');
+
 const math = (text, displayMode) => katex.renderToString(text, { displayMode, throwOnError: false });
 
 const marked = new Marked({
@@ -41,8 +89,8 @@ const marked = new Marked({
     },
   ],
   renderer: {
-    // 글 안의 HTML은 그대로 글자로 보여 줌
-    html: ({ text }) => escapeHtml(text),
+    // 글 안의 HTML: 안전한 태그만 살림. 블록(줄 전체가 HTML)은 감싸서 사진을 양옆으로 띄울 수 있게
+    html: ({ text, block }) => (block ? `<div class="${styles.htmlBlock}">${safeHtml(text)}</div>` : safeHtml(text)),
     // ![캡션](주소) → 사진 + "사진 N. 캡션". 번호는 글 안의 순서대로 자동 (캡션이 비어 있으면 "사진 N"만)
     // 직접 올린 사진이 아직 이 브라우저에만 있으면 그걸 보여 줌
     image({ href, text }) {
