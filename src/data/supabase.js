@@ -50,12 +50,40 @@ let ready = !supabase; // 로그인 상태를 아직 확인하는 중이면 fals
 const listeners = new Set();
 const emit = () => listeners.forEach((fn) => fn());
 
+// 로그인 정보(JWT) 안의 내용: amr = 이번 로그인을 어떤 방법으로 했는지, session_id = 이 로그인의 고유번호
+function claims(next) {
+  try {
+    const part = next.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(decodeURIComponent(escape(atob(part))));
+  } catch {
+    return {};
+  }
+}
+
+// 이 블로그는 이메일·비밀번호로만 로그인하니, 메일 링크(초대·재설정·매직 링크)로 로그인한 상태면
+// 아직 비밀번호를 안 정한 것으로 봄. 주소의 type=invite 를 놓쳐도(예전 화면이 캐시에서 열림 등) 이걸로 알아챔
+// 이 로그인에서 비밀번호를 정했으면 그 로그인 번호를 기억해 두고 다시 묻지 않음
+const LINK_METHODS = new Set(['invite', 'recovery', 'otp', 'magiclink']);
+const DONE = 'hanlog:password-set-session';
+
+function linkLogin(next) {
+  const { amr = [], session_id: id } = claims(next);
+  if (!amr.length || !amr.every((entry) => LINK_METHODS.has(entry.method))) return null;
+  try {
+    if (id && localStorage.getItem(DONE) === id) return null;
+  } catch {
+    // 저장소를 못 쓰면 매번 확인
+  }
+  return amr.some((entry) => entry.method === 'recovery') ? 'recovery' : 'invite';
+}
+
 if (supabase) {
   supabase.auth.onAuthStateChange((_event, next) => {
     session = next;
     ready = true;
     if (!next) store(SET_PASSWORD, null); // 로그아웃하면 더 안 물어봄
-    else if (stored(SET_PASSWORD) && !/^#\/set-password\/?$/.test(window.location.hash)) {
+    else if (!stored(SET_PASSWORD) && linkLogin(next)) store(SET_PASSWORD, linkLogin(next));
+    if (next && stored(SET_PASSWORD) && !/^#\/set-password\/?$/.test(window.location.hash)) {
       // 링크로 막 로그인됨 → 비밀번호부터 정하게 (이벤트 처리 중에 주소를 바꾸지 않도록 다음 차례에)
       setTimeout(() => window.location.replace('#/set-password'), 0);
     }
@@ -91,10 +119,17 @@ export const pendingPasswordLink = () => stored(SET_PASSWORD);
 // 링크가 잘못됐을 때 Supabase가 준 오류 코드 (예: 'otp_expired')
 export const passwordLinkError = () => stored(LINK_ERROR);
 
-// 지금 로그인한 계정의 비밀번호를 정함. 다 되면 위의 기억을 지움
-export async function setPassword(password) {
-  const { error } = await supabase.auth.updateUser({ password });
+// 지금 로그인한 계정의 비밀번호와 별명(로고 "별명 in Hanlog"의 앞부분)을 정함. 다 되면 위의 기억을 지움
+// 별명을 비우면 그대로 둠 (로고에는 이메일 @ 앞부분이 나옴)
+export async function setPassword(password, name = '') {
+  const { error } = await supabase.auth.updateUser(name ? { password, data: { name } } : { password });
   if (error) throw error;
+  try {
+    const id = claims(session ?? {}).session_id;
+    if (id) localStorage.setItem(DONE, id);
+  } catch {
+    // 저장소를 못 쓰면 이번 탭에서만 (아래 기억을 지우는 것으로 충분)
+  }
   store(SET_PASSWORD, null);
   store(LINK_ERROR, null);
 }

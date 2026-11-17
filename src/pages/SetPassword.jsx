@@ -32,6 +32,9 @@ function message(err) {
 export default function SetPassword() {
   const session = useSession();
   const ready = useAuthReady();
+  // 손대기 전(null)엔 이미 정해 둔 별명을 보여 줌 (로그인 확인이 늦게 끝나도 채워지도록)
+  const [nameInput, setName] = useState(null);
+  const name = nameInput ?? session?.user.user_metadata?.name ?? '';
   const [password, setValue] = useState('');
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
@@ -49,7 +52,7 @@ export default function SetPassword() {
     setBusy(true);
     setError('');
     try {
-      await setPassword(password);
+      await setPassword(password, name.trim());
     } catch (err) {
       setError(message(err));
       setBusy(false);
@@ -81,12 +84,25 @@ export default function SetPassword() {
           <span>이메일</span>
           <input type="email" autoComplete="username" value={session.user.email ?? ''} readOnly disabled />
         </label>
+        {/* 로고 "별명 in Hanlog"에 나오는 이름. 비우면 이메일 @ 앞부분 */}
+        <label className={styles.field}>
+          <span>별명</span>
+          <input
+            type="text"
+            autoComplete="nickname"
+            autoFocus
+            maxLength={30}
+            placeholder={session.user.email?.split('@')[0]}
+            disabled={busy}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </label>
         <label className={styles.field}>
           <span>새 비밀번호</span>
           <input
             type="password"
             autoComplete="new-password"
-            autoFocus
             required
             minLength={MIN_LENGTH}
             disabled={busy}
