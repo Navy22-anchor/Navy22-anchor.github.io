@@ -215,13 +215,14 @@ export default function DynamicIsland() {
   const [scheduling, setScheduling] = useState(null); // 달력을 연 곡 { track, top, button }
   const [wake, setWake] = useState(0);
   const pickColor = useAlbumColor(scheduling?.track.artwork, ON_WHITE);
+  const currentPending = schedules.filter((s) => s.track.id === track.id); // 지금 올라간 곡의 예약
   const waveColor = useAlbumColor(track.artwork, ON_BLACK); // 지금 재생기에 올라간 곡
 
-  // 미리듣기 주소를 받아 오디오를 준비. 30초가 끝나면 처음부터 반복
+  // 미리듣기 주소를 받아 오디오를 준비. 30초를 한 번 끝까지 들으면 멈춤 (다시 누르면 처음부터)
   useEffect(() => {
     const audio = new Audio();
     audio.preload = 'metadata';
-    audio.loop = true;
+    audio.loop = false;
     audioRef.current = audio;
 
     const sync = () => setElapsed(audio.currentTime);
@@ -236,6 +237,7 @@ export default function DynamicIsland() {
     audio.addEventListener('loadedmetadata', onMeta);
     audio.addEventListener('play', onPlay);
     audio.addEventListener('pause', onPause);
+    audio.addEventListener('ended', onPause);
 
     return () => {
       audio.pause();
@@ -245,6 +247,7 @@ export default function DynamicIsland() {
       audio.removeEventListener('loadedmetadata', onMeta);
       audio.removeEventListener('play', onPlay);
       audio.removeEventListener('pause', onPause);
+      audio.removeEventListener('ended', onPause);
     };
   }, []);
 
@@ -309,7 +312,7 @@ export default function DynamicIsland() {
     const anchor = document.querySelector('[data-calendar-anchor]')?.getBoundingClientRect();
     const place = anchor
       ? { top: (anchor.bottom + 6 - rect.top) / scale, right: (rect.right - anchor.right) / scale }
-      : { top: (button.closest('li').getBoundingClientRect().top - rect.top) / scale };
+      : { top: ((button.closest('li') ?? button).getBoundingClientRect().top - rect.top) / scale };
     setScheduling((cur) => (cur?.track.id === r.id ? null : { track: r, place, button }));
   };
   const closeSchedule = () => {
@@ -457,7 +460,24 @@ export default function DynamicIsland() {
 
           <div className={styles.controls}>
             {/* 왼쪽 빈자리: 오른쪽 돋보기와 균형을 맞추는 투명 아이콘 */}
-            <span className={styles.spacer} aria-hidden="true" />
+            {/* 왼쪽: 지금 올라간 곡 재생 예약 (주인만). 방문자에게는 오른쪽 돋보기와 균형을 맞추는 빈칸 */}
+            {editable ? (
+              <button
+                type="button"
+                className={styles.scheduleButton}
+                aria-label={`${track.title} 재생 예약${currentPending.length ? ` (${currentPending.length}개 예약됨)` : ''}`}
+                aria-expanded={scheduling?.track.id === track.id}
+                title={currentPending.map((s) => scheduleFormat.format(s.at)).join('\n') || undefined}
+                style={currentPending[0]?.color ? { color: currentPending[0].color } : undefined}
+                onClick={(e) => openSchedule(track, e.currentTarget)}
+                disabled={!track.previewUrl}
+                inert={searching}
+              >
+                <Icon name="timer" />
+              </button>
+            ) : (
+              <span className={styles.spacer} aria-hidden="true" />
+            )}
             <div className={styles.playControls} inert={searching}>
               <button type="button" aria-label="처음으로" onClick={() => seek(0)} disabled={!ready}>
                 <Icon name="backward" size={20} />

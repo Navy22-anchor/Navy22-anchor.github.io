@@ -344,6 +344,23 @@
 .shell[data-searching] .playControls > button:nth-child(2) { --hide-delay: 0.04s; }
 .shell[data-searching] .playControls > button:nth-child(1) { --hide-delay: 0.08s; }
 
+/* 왼쪽 예약 버튼: 검색창이 펼쳐지는 자리라 재생 버튼 다음으로 작아지며 사라짐 */
+.scheduleButton {
+  display: grid;
+  place-items: center;
+  transition:
+    transform 0.2s ease-out 0.2s,
+    opacity 0.2s ease-out 0.2s;
+}
+
+.shell[data-searching] .scheduleButton {
+  transform: scale(0);
+  opacity: 0;
+  transition:
+    transform 0.2s ease-in 0.12s,
+    opacity 0.16s ease-in 0.16s;
+}
+
 /* 2. 검색창: 오른쪽 끝(돋보기 자리)은 고정, 폭 30 → 295로 왼쪽으로 펼쳐짐 */
 .searchField {
   position: absolute;
