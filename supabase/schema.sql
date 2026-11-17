@@ -130,3 +130,22 @@ create policy "책등 주인만 바꾸기" on storage.objects for update to auth
   with check (bucket_id = 'book-spines' and (select public.is_owner()));
 create policy "책등 주인만 지우기" on storage.objects for delete to authenticated
   using (bucket_id = 'book-spines' and (select public.is_owner()));
+
+-- 사이트 설정 (key → value). 지금은 음악 아일랜드의 기본 곡(island_song)만
+-- 주인이 검색한 곡을 재생하면 그 곡이 기본 곡이 되어 모든 방문자에게 처음 올라감
+create table if not exists public.site_settings (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.site_settings enable row level security;
+grant select on public.site_settings to anon, authenticated;
+grant insert, update on public.site_settings to authenticated;
+
+drop policy if exists "누구나 읽기" on public.site_settings;
+drop policy if exists "주인만 추가" on public.site_settings;
+drop policy if exists "주인만 수정" on public.site_settings;
+create policy "누구나 읽기" on public.site_settings for select to anon, authenticated using (true);
+create policy "주인만 추가" on public.site_settings for insert to authenticated with check ((select public.is_owner()));
+create policy "주인만 수정" on public.site_settings for update to authenticated using ((select public.is_owner())) with check ((select public.is_owner()));

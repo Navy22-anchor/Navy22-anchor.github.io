@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ScheduleCalendar } from './DateTime.jsx';
 import { SCHEDULE_GRACE, addSchedule as saveSchedule, scheduleMarks, takeDue, useSchedules } from './schedules.js';
+import { saveIslandSong, useIslandSong } from '../data/islandSong.js';
 import { useCanEdit } from '../data/supabase.js';
 import styles from './DynamicIsland.module.css';
 
@@ -8,7 +9,7 @@ import styles from './DynamicIsland.module.css';
 // 검은 껍데기 하나가 가운데를 기준으로 커지고, 안의 내용만 바뀜 (Figma "Island hover motion" 92:652)
 // 소리와 앨범 표지는 iTunes Search API에서 받아 옴 (무료, 키 없음). 주소가 바뀔 수 있어 열 때마다 곡 ID로 새로 받음
 // 표지는 저작권이 음반사에 있어 저장소에 넣지 않고 Apple 서버의 이미지를 그대로 씀
-const ITUNES_TRACK_ID = 1508562516; // Glass Animals - Heat Waves (Dreamland)
+// 처음 올라가는 곡은 기본 곡(data/islandSong.js). 주인이 검색 결과를 재생하면 그 곡이 기본 곡이 됨
 const SEEK_STEP = 10;
 const SEARCH_LIMIT = 5; // 검색 결과 최대 개수
 const SEARCH_DELAY = 300; // 입력을 멈추고 이만큼 지나면 검색 (ms)
@@ -187,14 +188,11 @@ const toTrack = (r) => ({
   // 100×100이 기본. 큰 표지(53px)가 고해상도 화면에서도 선명하게 160으로 요청
   artwork: r.artworkUrl100?.replace('100x100bb', '160x160bb') ?? '',
   previewUrl: r.previewUrl,
+  explicit: r.trackExplicitness === 'explicit',
 });
 
-export default function DynamicIsland({
-  title = 'Heat Waves',
-  artist = 'Glass Animals',
-  explicit = false, // iTunes 정보상 Explicit 아님
-  trackId = ITUNES_TRACK_ID,
-}) {
+export default function DynamicIsland() {
+  const song = useIslandSong(); // 기본 곡
   const rootRef = useRef(null);
   const audioRef = useRef(null);
   const inputRef = useRef(null);
@@ -203,7 +201,8 @@ export default function DynamicIsland({
   const [elapsed, setElapsed] = useState(0);
   const [duration, setDuration] = useState(30);
   // 지금 재생기에 올라간 곡. 검색 결과를 재생하면 바뀜
-  const [track, setTrack] = useState({ id: trackId, title, artist, artwork: '', previewUrl: '' });
+  const [track, setTrack] = useState(() => ({ ...song, artwork: '', previewUrl: '' }));
+  const pickedRef = useRef(false); // 검색 결과·예약 곡을 틀었으면 기본 곡이 바뀌어도 그대로 둠
   const [searching, setSearching] = useState(false);
   const [pinned, setPinned] = useState(false); // 검색창을 클릭해 고정했는지
   const [query, setQuery] = useState('');
@@ -238,19 +237,7 @@ export default function DynamicIsland({
     audio.addEventListener('play', onPlay);
     audio.addEventListener('pause', onPause);
 
-    const controller = new AbortController();
-    fetch(`https://itunes.apple.com/lookup?id=${trackId}&country=KR`, { signal: controller.signal })
-      .then((res) => res.json())
-      .then((data) => {
-        const found = data.results?.[0];
-        if (!found?.previewUrl) return;
-        audio.src = found.previewUrl;
-        setTrack((t) => ({ ...t, artwork: toTrack(found).artwork, previewUrl: found.previewUrl }));
-      })
-      .catch(() => {}); // 못 받으면 재생 버튼만 비활성
-
     return () => {
-      controller.abort();
       audio.pause();
       audio.removeAttribute('src');
       audio.removeEventListener('timeupdate', sync);
@@ -259,7 +246,26 @@ export default function DynamicIsland({
       audio.removeEventListener('play', onPlay);
       audio.removeEventListener('pause', onPause);
     };
-  }, [trackId]);
+  }, []);
+
+  // 기본 곡을 곡 ID로 받아 재생기에 올림 (다른 컴퓨터에서 기본 곡이 바뀌어 늦게 도착해도, 아직 다른 곡을 안 틀었으면 바꿈)
+  useEffect(() => {
+    if (pickedRef.current) return undefined;
+    const audio = audioRef.current;
+    const controller = new AbortController();
+    setTrack({ ...song, artwork: '', previewUrl: '' });
+    fetch(`https://itunes.apple.com/lookup?id=${song.id}&country=${song.country || 'US'}`, { signal: controller.signal })
+      .then((res) => res.json())
+      .then((data) => {
+        const found = data.results?.[0];
+        if (!found?.previewUrl || pickedRef.current) return;
+        audio.src = found.previewUrl;
+        setElapsed(0);
+        setTrack({ ...song, artwork: toTrack(found).artwork, previewUrl: found.previewUrl });
+      })
+      .catch(() => {}); // 못 받으면 재생 버튼만 비활성
+    return () => controller.abort();
+  }, [song]);
 
   // 예약 시각이 되면 재생. 가장 가까운 예약까지 기다리되 1분마다 다시 확인 (절전 후 깨어난 경우 대비)
   useEffect(() => {
@@ -279,6 +285,7 @@ export default function DynamicIsland({
   // 미리듣기 주소가 바뀌었을 수 있어 곡 ID로 다시 받아 재생. 못 받으면 저장해 둔 주소로
   // (방문한 뒤 한 번도 누르지 않았다면 브라우저가 자동 재생을 막을 수 있음)
   const playScheduled = (t) => {
+    pickedRef.current = true;
     const start = (url) => {
       if (!url) return;
       const audio = audioRef.current;
@@ -370,14 +377,17 @@ export default function DynamicIsland({
     });
   };
 
+  // 검색 결과 재생. 주인이 틀면 이 곡이 앞으로의 기본 곡이 됨
   const playResult = (r) => {
     const audio = audioRef.current;
+    pickedRef.current = true;
     if (track.previewUrl !== r.previewUrl) {
       audio.src = r.previewUrl;
       setTrack(r);
       setElapsed(0);
     }
     audio.play().catch(() => {});
+    if (editable) saveIslandSong(r).catch(() => {});
   };
   const pauseResult = (r) => {
     if (track.previewUrl === r.previewUrl) audioRef.current.pause();
@@ -398,7 +408,7 @@ export default function DynamicIsland({
   const titleText = (
     <>
       {track.title}
-      {explicit && track.id === trackId && <span className={styles.explicit} aria-label="Explicit">E</span>}
+      {track.explicit && <span className={styles.explicit} aria-label="Explicit">E</span>}
     </>
   );
 
@@ -553,6 +563,7 @@ export default function DynamicIsland({
           style={{ ...scheduling.place, ...(pickColor && { '--dt-red': pickColor }) }}
           label={scheduling.track.title}
           marks={scheduleMarks(schedules)}
+          events={schedules}
           onConfirm={addSchedule}
           onClose={closeSchedule}
         />
