@@ -1,6 +1,3 @@
-import bookLeft from '../assets/book-left.jpg';
-import bookCenter from '../assets/work-book.jpg';
-import bookRight from '../assets/book-right.jpg';
 import workNight from '../assets/work-night.jpg';
 import workWhisky from '../assets/work-whisky.jpg';
 import { loadDeletedIds, loadLocalPosts } from './localPosts.js';
@@ -44,16 +41,6 @@ const buildRows = (posts) => [
     category: 'Cooking',
     kind: 'images',
     items: [{ id: 'whisky', src: workWhisky, w: 426, h: 516, label: '위스키, 2026.03.21' }],
-  },
-  {
-    id: 'library',
-    category: 'Library',
-    kind: 'images',
-    items: [
-      { id: 'book-1', src: bookLeft, w: 279, h: 349, label: '책 제목, 저자, 읽은 날짜' },
-      { id: 'book-2', src: bookCenter, w: 279, h: 366, label: 'Programming: Principles and Practice Using C++, Bjarne Stroustrup, 읽은 날짜' },
-      { id: 'book-3', src: bookRight, w: 279, h: 358, label: '책 제목, 저자, 읽은 날짜' },
-    ],
   },
   {
     id: 'ai',
