@@ -5,6 +5,7 @@ import DateTime from '../components/DateTime.jsx';
 import DynamicIsland from '../components/DynamicIsland.jsx';
 import ProjectStrip from '../components/ProjectStrip.jsx';
 import { useBooks } from '../data/books.js';
+import { useCoverSizes } from '../data/coverSizes.js';
 import { addCategory, loadCategories, removeCategory, useCategories } from '../data/categories.js';
 import { useCanEdit } from '../data/supabase.js';
 import { categories as baseCategories, loadRows } from '../data/projects.js';
@@ -42,27 +43,32 @@ function withEmptyRows(list, names, skip, source = []) {
     : [...rows, ...missing.map(emptyRow)];
 }
 
-// 책 → 고른 카테고리 줄의 사진 칸 (크기는 다른 책 표지와 같은 폭 279, 표지 비율로 높이)
-const bookItem = (book) => ({
-  id: `book-${book.id}`,
-  shelf: book.category || 'Library', // 누르면 이 카테고리의 책장으로
-  src: book.cover,
-  w: 279,
-  h: 400,
-  label: [book.title, book.authors, book.publisher].filter(Boolean).join(', '),
-});
+// 책 → 고른 카테고리 줄의 사진 칸. 폭은 다른 책 표지와 같은 279, 높이는 표지 원본 비율대로 (안 잘리게)
+// 원본 크기를 재기 전에는 일반적인 책 비율(279×400)
+const COVER_W = 279;
+const bookItem = (book, sizes) => {
+  const size = sizes[book.cover];
+  return {
+    id: `book-${book.id}`,
+    shelf: book.category || 'Library', // 누르면 이 카테고리의 책장으로
+    src: book.cover,
+    w: COVER_W,
+    h: size ? Math.round((COVER_W * size[1]) / size[0]) : 400,
+    label: [book.title, book.authors, book.publisher].filter(Boolean).join(', '),
+  };
+};
 
 // 책 표지를 고른 카테고리 줄 끝에 붙임 (예전 책은 Library)
 // 빈 줄은 표지 줄로 바뀌고, 글 줄(카드)에는 섞을 수 없어 바로 뒤에 같은 카테고리의 표지 줄을 따로 둠
 // 줄이 없는 카테고리면 맨 끝에 새 줄. 목록에서 지운 카테고리의 책은 숨김
-function withBooks(rows, books, names) {
+function withBooks(rows, books, names, sizes) {
   if (books.length === 0) return rows;
   const groups = [];
   for (const book of books) {
     const name = book.category || 'Library';
     const group = groups.find((g) => same(g.name, name));
-    if (group) group.items.push(bookItem(book));
-    else groups.push({ name, items: [bookItem(book)] });
+    if (group) group.items.push(bookItem(book, sizes));
+    else groups.push({ name, items: [bookItem(book, sizes)] });
   }
   const take = (name) => {
     const i = groups.findIndex((g) => same(g.name, name));
@@ -90,7 +96,11 @@ export default function Landing() {
   // "책" 검색 창에서 추가한 책은 고른 카테고리 줄 끝에 표지로 붙임
   const books = useBooks();
   const categories = useCategories();
-  const rows = useMemo(() => withBooks(rowList, books, categories), [rowList, books, categories]);
+  const coverSizes = useCoverSizes(books.map((book) => book.cover));
+  const rows = useMemo(
+    () => withBooks(rowList, books, categories, coverSizes),
+    [rowList, books, categories, coverSizes],
+  );
   const [searchingBooks, setSearchingBooks] = useState(false);
   const [insertingName, setInsertingName] = useState(null); // 빈 줄을 끼우는 중인 카테고리 이름
   // 카테고리 목록이 바뀌면(다른 컴퓨터에서 추가·삭제 포함) 빈 줄도 맞춤
