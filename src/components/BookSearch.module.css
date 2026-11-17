@@ -207,27 +207,6 @@
   white-space: nowrap;
 }
 
-/* 고른 책: 제목 + 저자 (가운데) */
-.confirmBook {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  max-width: 100%;
-  margin: -12px 0 0;
-  text-align: center;
-}
-
-.confirmTitle {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.confirmBook .meta {
-  max-width: 100%;
-}
-
 .confirmActions {
   display: flex;
   gap: 8px;

@@ -169,7 +169,7 @@ export default function BookSearch({ onClose }) {
           {status || '↑↓로 고르고 Enter로 추가 · 카카오 책 검색'}
         </p>
       </dialog>
-      {picked && <ConfirmAdd book={picked} onConfirm={(category) => add(picked, category)} onCancel={closeConfirm} />}
+      {picked && <ConfirmAdd onConfirm={(category) => add(picked, category)} onCancel={closeConfirm} />}
     </>
   );
 }
@@ -180,9 +180,9 @@ const defaultCategory = () => {
   return list.find((c) => c.toLowerCase() === 'library') ?? list[0] ?? 'Library';
 };
 
-// Figma "Publish confirm dialog" (68:198·68:212)과 같은 모양: [카테고리▾] 에 추가하시겠습니까? + 고른 책 + 추가 / 취소
+// Figma "Publish confirm dialog" (68:198·68:212)과 같은 모양: [카테고리▾] 에 추가하시겠습니까? + 추가 / 취소
 // 카테고리 알약을 누르면 목록이 펼쳐짐 → 고른 카테고리 줄(랜딩)에 책 표지가 붙음
-function ConfirmAdd({ book, onConfirm, onCancel }) {
+function ConfirmAdd({ onConfirm, onCancel }) {
   const ref = useRef(null);
   const [category, setCategory] = useState(defaultCategory);
 
@@ -208,10 +208,6 @@ function ConfirmAdd({ book, onConfirm, onCancel }) {
           에 추가하시겠습니까?
         </h2>
       </div>
-      <p className={styles.confirmBook}>
-        <span className={styles.confirmTitle}>{book.title}</span>
-        {book.authors && <span className={styles.meta}>{book.authors}</span>}
-      </p>
       <div className={styles.confirmActions}>
         <button
           type="button"
