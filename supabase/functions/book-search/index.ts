@@ -46,8 +46,11 @@ Deno.serve(async (req) => {
   const res = await fetch(`https://dapi.kakao.com/v3/search/book?size=10&query=${encodeURIComponent(q)}`, {
     headers: { Authorization: `KakaoAK ${key}` },
   });
+  // 카카오가 보낸 응답을 그대로 로그에 남김 (대시보드 → Edge Functions → book-search → Logs)
+  const raw = await res.text();
+  console.log(`[book-search] query="${q}" status=${res.status}\n${raw}`);
   if (!res.ok) return json({ error: `카카오 검색 실패 (${res.status})` }, 502);
-  const { documents = [] } = await res.json();
+  const { documents = [] } = JSON.parse(raw);
 
   // 블로그에 필요한 것만
   const books = documents.map((d: Record<string, unknown>) => ({
