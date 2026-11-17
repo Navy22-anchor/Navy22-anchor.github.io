@@ -107,3 +107,18 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* 비밀번호 정하기 화면에서 링크가 잘못됐을 때 안내 */
+.notice {
+  max-width: 320px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
+  color: var(--color-secondary);
+}
+
+.notice a {
+  color: var(--color-text);
+  text-decoration: underline;
+}

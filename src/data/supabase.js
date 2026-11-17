@@ -7,6 +7,42 @@ import { useSyncExternalStore } from 'react';
 const url = import.meta.env.SUPABASE_URL;
 const key = import.meta.env.SUPABASE_KEY;
 
+// 초대·비밀번호 재설정 메일의 링크로 들어오면 주소 끝(#access_token=…&type=invite)에 로그인 정보가 붙어 옴
+// Supabase가 그걸 읽고 지우기 전에(createClient 전에) 어떤 링크였는지만 기억해 두고,
+// 로그인이 되면 비밀번호 정하는 화면(#/set-password)으로 보냄. 새로고침해도 이어지게 이 탭에 저장
+const SET_PASSWORD = 'hanlog:set-password';
+const LINK_ERROR = 'hanlog:link-error';
+
+function store(name, value) {
+  try {
+    if (value) sessionStorage.setItem(name, value);
+    else sessionStorage.removeItem(name);
+  } catch {
+    // 저장소를 못 쓰면 이번 화면에서만
+  }
+}
+
+function stored(name) {
+  try {
+    return sessionStorage.getItem(name);
+  } catch {
+    return null;
+  }
+}
+
+if (url && key) {
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  const type = params.get('type');
+  if (params.has('access_token') && (type === 'invite' || type === 'recovery')) {
+    store(SET_PASSWORD, type);
+    store(LINK_ERROR, null);
+  } else if (params.has('error_description')) {
+    // 만료됐거나 이미 쓴 링크: 로그인 정보가 없으니 주소를 바로 정리하고 안내 화면으로
+    store(LINK_ERROR, params.get('error_code') || params.get('error') || 'error');
+    window.location.replace('#/set-password');
+  }
+}
+
 export const supabase = url && key ? createClient(url, key) : null;
 
 let session = null;
@@ -18,6 +54,11 @@ if (supabase) {
   supabase.auth.onAuthStateChange((_event, next) => {
     session = next;
     ready = true;
+    if (!next) store(SET_PASSWORD, null); // 로그아웃하면 더 안 물어봄
+    else if (stored(SET_PASSWORD) && !/^#\/set-password\/?$/.test(window.location.hash)) {
+      // 링크로 막 로그인됨 → 비밀번호부터 정하게 (이벤트 처리 중에 주소를 바꾸지 않도록 다음 차례에)
+      setTimeout(() => window.location.replace('#/set-password'), 0);
+    }
     emit();
   });
 }
@@ -43,4 +84,17 @@ export async function signIn(email, password) {
 
 export async function signOut() {
   await supabase.auth.signOut();
+}
+
+// 링크로 들어온 계정이 비밀번호를 아직 안 정했는지: 'invite'(초대) · 'recovery'(재설정) · null
+export const pendingPasswordLink = () => stored(SET_PASSWORD);
+// 링크가 잘못됐을 때 Supabase가 준 오류 코드 (예: 'otp_expired')
+export const passwordLinkError = () => stored(LINK_ERROR);
+
+// 지금 로그인한 계정의 비밀번호를 정함. 다 되면 위의 기억을 지움
+export async function setPassword(password) {
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+  store(SET_PASSWORD, null);
+  store(LINK_ERROR, null);
 }
