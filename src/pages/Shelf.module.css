@@ -116,6 +116,11 @@
   line-height: 1.7;
 }
 
+.tools {
+  display: flex;
+  gap: 12px;
+}
+
 .upload {
   color: var(--color-secondary);
   font-size: 13px;

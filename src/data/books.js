@@ -115,6 +115,16 @@ export async function setSpine(book, file) {
   await refresh();
 }
 
+// 책 삭제 (주인만): books 표에서 지우고, 올린 책등 사진도 Storage에서 지움
+export async function removeBook(book) {
+  if (!supabase) return set(books.filter((b) => b.id !== book.id));
+  const { error } = await supabase.from('books').delete().eq('id', book.id);
+  if (error) throw error;
+  const spine = book.spine?.split('/book-spines/')[1];
+  if (spine) supabase.storage.from('book-spines').remove([spine]).catch(() => {});
+  await refresh();
+}
+
 // 카카오 책 검색 (Edge Function 경유). [{ isbn, title, authors, publisher, year, thumbnail, cover }]
 export async function searchBooks(query) {
   const q = query.trim();

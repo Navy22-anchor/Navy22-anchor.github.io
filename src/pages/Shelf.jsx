@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { setSpine, useBooks } from '../data/books.js';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import { removeBook, setSpine, useBooks } from '../data/books.js';
 import { useCanEdit } from '../data/supabase.js';
 import backIcon from '../assets/back.svg';
 import styles from './Shelf.module.css';
@@ -19,6 +20,9 @@ export default function Shelf({ name }) {
   const [selectedId, setSelectedId] = useState(null);
   const [status, setStatus] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(null); // "삭제 하겠습니까?" 창에 띄운 책
+  const [removing, setRemoving] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const fileRef = useRef(null);
   const target = useRef(null); // 책등을 올릴 책
 
@@ -43,6 +47,20 @@ export default function Shelf({ name }) {
       setStatus(`올리지 못했어요 (${err.message})`);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const confirmRemove = async () => {
+    setRemoving(true);
+    setDeleteError('');
+    try {
+      await removeBook(deleting);
+      setDeleting(null);
+      setSelectedId(null); // 지운 뒤엔 첫 책을 고름
+    } catch (err) {
+      setDeleteError(`삭제하지 못했어요 (${err.message})`);
+    } finally {
+      setRemoving(false);
     }
   };
 
@@ -95,9 +113,14 @@ export default function Shelf({ name }) {
                 {[selected.title, selected.authors, selected.publisher].filter(Boolean).join(', ')}
               </p>
               {editable && (
-                <button type="button" className={styles.upload} onClick={() => pickSpine(selected)} disabled={uploading}>
-                  {selected.spine ? '책등 바꾸기' : '책등 올리기'}
-                </button>
+                <span className={styles.tools}>
+                  <button type="button" className={styles.upload} onClick={() => pickSpine(selected)} disabled={uploading}>
+                    {selected.spine ? '책등 바꾸기' : '책등 올리기'}
+                  </button>
+                  <button type="button" className={styles.upload} onClick={() => setDeleting(selected)} disabled={uploading}>
+                    책 삭제
+                  </button>
+                </span>
               )}
               {status && (
                 <p className={styles.status} role="status">
@@ -107,6 +130,19 @@ export default function Shelf({ name }) {
             </div>
           )}
         </main>
+      )}
+
+      {/* Figma "Delete confirm dialog" (87:3860) */}
+      {deleting && (
+        <ConfirmDialog
+          onConfirm={confirmRemove}
+          onClose={() => {
+            setDeleting(null);
+            setDeleteError('');
+          }}
+          busy={removing}
+          error={deleteError}
+        />
       )}
 
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={onFile} />
