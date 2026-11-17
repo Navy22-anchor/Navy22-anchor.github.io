@@ -63,7 +63,15 @@ export default function RowCarousel({ row, index, reveal, onChange, onOpen }) {
             {row.kind === 'posts' ? (
               <PostCard layout="horizontal" {...item} />
             ) : (
-              <img className={styles.image} src={item.src} alt="" width={item.w} height={item.h} draggable="false" />
+              <img
+                className={styles.image}
+                src={item.src}
+                alt=""
+                width={item.w}
+                height={item.h}
+                draggable="false"
+                data-book={item.book || undefined}
+              />
             )}
           </button>
         );

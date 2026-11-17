@@ -37,6 +37,13 @@
   object-fit: cover;
 }
 
+/* 책 표지: 바탕이 흰 표지도 배경과 구분되게 옅은 그림자 */
+.image[data-book] {
+  box-shadow:
+    0 1px 3px rgb(0 0 0 / 0.14),
+    0 8px 20px rgb(0 0 0 / 0.14);
+}
+
 /* 가운데 글 카드는 그림자를 깊게 → 양옆 카드가 뒤로 물러나 보이게 */
 .slot article {
   transition: filter 0.35s;

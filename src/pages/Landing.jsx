@@ -53,6 +53,7 @@ const bookItem = (book, sizes) => {
     // 가운데 표지를 누르면 이 카테고리의 책장으로 (그 책이 골라진 채로)
     shelf: `${encodeURIComponent(book.category || 'Library')}/${encodeURIComponent(book.id)}`,
     src: book.cover,
+    book: true, // 표지에 옅은 그림자 (RowCarousel)
     w: COVER_W,
     h: size ? Math.round((COVER_W * size[1]) / size[0]) : 400,
     label: [book.title, book.authors, book.publisher].filter(Boolean).join(', '),
