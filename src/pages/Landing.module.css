@@ -86,9 +86,10 @@
   --nav-w: 88px;
 }
 
-/* 방문자: 오른쪽 위 글쓰기가 없으니 아일랜드가 오른쪽 끝으로 (Figma 1920에서 x 1894 → 26px) */
+/* 방문자: 오른쪽 위 글쓰기가 없으니 아일랜드가 오른쪽으로 (Figma 1920에서 x 1894 → 26px)
+   다만 펼치면 양옆으로 --island-push(62px)씩 커지므로, 펼친 모습이 화면 끝에서 26px 떨어지게 그만큼 더 띄움 */
 .header[data-visitor] {
-  --island-right: 26px;
+  --island-right: calc(var(--island-push) + 26px);
 }
 
 /* "책": 글쓰기 링크와 똑같이 보이는 글자 버튼 */
