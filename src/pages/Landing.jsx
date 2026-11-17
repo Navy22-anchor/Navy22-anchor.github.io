@@ -42,7 +42,7 @@ function withEmptyRows(list, names, skip, source = []) {
     : [...rows, ...missing.map(emptyRow)];
 }
 
-// 서재 책 → Library 줄의 사진 칸 (크기는 다른 책 표지와 같은 폭 279, 표지 비율로 높이)
+// 책 → 고른 카테고리 줄의 사진 칸 (크기는 다른 책 표지와 같은 폭 279, 표지 비율로 높이)
 const bookItem = (book) => ({
   id: `book-${book.id}`,
   src: book.cover,
@@ -51,22 +51,46 @@ const bookItem = (book) => ({
   label: [book.title, book.authors, book.publisher].filter(Boolean).join(', '),
 });
 
+// 책 표지를 고른 카테고리 줄 끝에 붙임 (예전 책은 Library)
+// 빈 줄은 표지 줄로 바뀌고, 글 줄(카드)에는 섞을 수 없어 바로 뒤에 같은 카테고리의 표지 줄을 따로 둠
+// 줄이 없는 카테고리면 맨 끝에 새 줄. 목록에서 지운 카테고리의 책은 숨김
+function withBooks(rows, books, names) {
+  if (books.length === 0) return rows;
+  const groups = [];
+  for (const book of books) {
+    const name = book.category || 'Library';
+    const group = groups.find((g) => same(g.name, name));
+    if (group) group.items.push(bookItem(book));
+    else groups.push({ name, items: [bookItem(book)] });
+  }
+  const take = (name) => {
+    const i = groups.findIndex((g) => same(g.name, name));
+    return i === -1 ? null : groups.splice(i, 1)[0];
+  };
+  const bookRow = (name, items) => ({ id: `books-${name}`, category: name, kind: 'images', items });
+  const out = [];
+  for (const row of rows) {
+    const group = take(row.category);
+    if (!group) out.push(row);
+    else if (row.kind === 'posts') out.push(row, bookRow(row.category, group.items));
+    else out.push({ ...row, kind: 'images', items: [...row.items, ...group.items] });
+  }
+  for (const group of groups) {
+    if (names.some((name) => same(name, group.name))) out.push(bookRow(group.name, group.items));
+  }
+  return out;
+}
+
 const startIndex = (row) => Math.floor((row.items.length - 1) / 2) * (row.kind === 'posts' ? 0 : 1);
 
 export default function Landing() {
   const [{ rows: loadedRows, initialRow }] = useState(loadRows);
   const [rowList, setRows] = useState(() => withEmptyRows(loadedRows, loadCategories()));
-  // "책" 검색 창에서 서재에 추가한 책은 Library 줄 끝에 표지로 붙임
+  // "책" 검색 창에서 추가한 책은 고른 카테고리 줄 끝에 표지로 붙임
   const books = useBooks();
-  const rows = useMemo(
-    () =>
-      books.length === 0
-        ? rowList
-        : rowList.map((row) => (row.id === 'library' ? { ...row, items: [...row.items, ...books.map(bookItem)] } : row)),
-    [rowList, books],
-  );
-  const [searchingBooks, setSearchingBooks] = useState(false);
   const categories = useCategories();
+  const rows = useMemo(() => withBooks(rowList, books, categories), [rowList, books, categories]);
+  const [searchingBooks, setSearchingBooks] = useState(false);
   const [insertingName, setInsertingName] = useState(null); // 빈 줄을 끼우는 중인 카테고리 이름
   // 카테고리 목록이 바뀌면(다른 컴퓨터에서 추가·삭제 포함) 빈 줄도 맞춤
   useEffect(() => {

@@ -459,69 +459,6 @@
   cursor: default;
 }
 
-/* 카테고리: 화살표 없는 알약, 누르면 아래로 목록 */
-.category {
-  position: relative;
-}
-
-.categoryButton {
-  padding: 8px 18px;
-  border-radius: 999px;
-  background: var(--write-surface);
-  box-shadow: inset 0 0 0 1px transparent;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.5;
-  white-space: nowrap;
-  transition: box-shadow 0.15s;
-}
-
-.categoryButton:hover,
-.categoryButton[aria-expanded='true'] {
-  box-shadow: inset 0 0 0 1px var(--color-text);
-}
-
-.categoryMenu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 150px;
-  margin: 0;
-  padding: 6px;
-  border: 1px solid var(--write-placeholder);
-  border-radius: 10px;
-  background: var(--color-surface);
-  box-shadow:
-    0 4px 8px rgb(0 0 0 / 0.06),
-    0 16px 40px rgb(0 0 0 / 0.14);
-  list-style: none;
-  outline: none;
-}
-
-.categoryOption {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 10px;
-  border-radius: 6px;
-  font-size: 14px;
-  line-height: 1.5;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.categoryOption[data-active] {
-  background: var(--write-surface);
-}
-
-.categoryOption[aria-selected='true'] {
-  font-weight: 600;
-}
-
 /* GitHub 토큰 (발행 창) */
 .tokenField {
   display: flex;

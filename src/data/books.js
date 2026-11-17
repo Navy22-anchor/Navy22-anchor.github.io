@@ -36,7 +36,7 @@ const set = (next) => {
 async function refresh() {
   const { data, error } = await supabase
     .from('books')
-    .select('id, isbn, title, authors, publisher, year, cover')
+    .select('id, isbn, title, authors, publisher, year, cover, category')
     .order('created_at');
   if (!error) set(data);
 }
@@ -60,9 +60,9 @@ export const useBooks = () => useSyncExternalStore(subscribe, () => books);
 const sameBook = (a, b) => (a.isbn && a.isbn === b.isbn) || (a.title === b.title && a.authors === b.authors);
 export const hasBook = (book) => books.some((b) => sameBook(b, book));
 
-// 서재에 추가 (이미 있으면 그대로). 실패하면 화면을 되돌리고 오류를 던짐
-export async function addBook({ isbn = '', title, authors = '', publisher = '', year = '', cover = '' }) {
-  const book = { isbn, title, authors, publisher, year, cover };
+// 추가 (이미 있으면 그대로). category: 표지가 붙을 랜딩 줄 (기본 Library). 실패하면 화면을 되돌리고 오류를 던짐
+export async function addBook({ isbn = '', title, authors = '', publisher = '', year = '', cover = '', category = 'Library' }) {
+  const book = { isbn, title, authors, publisher, year, cover, category };
   if (hasBook(book)) return;
   if (!supabase) return set([...books, { id: crypto.randomUUID(), ...book }]);
   set([...books, { id: `pending-${Date.now()}`, ...book }]);

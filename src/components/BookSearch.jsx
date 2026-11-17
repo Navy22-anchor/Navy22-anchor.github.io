@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { addBook, hasBook, searchBooks } from '../data/books.js';
+import { loadCategories } from '../data/categories.js';
+import CategorySelect from './CategorySelect.jsx';
 import styles from './BookSearch.module.css';
 
 // Figma "Library / Book search (1440)" (306:2905): 오른쪽 위 "책"을 누르면 뜨는 책 검색 창
@@ -73,12 +75,12 @@ export default function BookSearch({ onClose }) {
 
   const closeConfirm = () => setPicked(null);
 
-  const add = async (book) => {
+  const add = async (book, category) => {
     setPicked(null);
     setAdding(true);
     try {
-      await addBook(book);
-      setStatus(`서재에 추가했어요: ${book.title}`);
+      await addBook({ ...book, category });
+      setStatus(`${category}에 추가했어요: ${book.title}`);
     } catch (err) {
       setStatus(`추가하지 못했어요 (${err.message})`);
     } finally {
@@ -164,17 +166,25 @@ export default function BookSearch({ onClose }) {
         )}
 
         <p className={styles.hint} role="status">
-          {status || '↑↓로 고르고 Enter로 서재에 추가 · 카카오 책 검색'}
+          {status || '↑↓로 고르고 Enter로 추가 · 카카오 책 검색'}
         </p>
       </dialog>
-      {picked && <ConfirmAdd book={picked} onConfirm={() => add(picked)} onCancel={closeConfirm} />}
+      {picked && <ConfirmAdd book={picked} onConfirm={(category) => add(picked, category)} onCancel={closeConfirm} />}
     </>
   );
 }
 
-// Figma "Publish confirm dialog" (68:198)과 같은 모양: [서재] 에 추가하시겠습니까? + 고른 책 + 추가 / 취소
+// 처음 고른 카테고리: Library (없으면 목록 첫 번째)
+const defaultCategory = () => {
+  const list = loadCategories();
+  return list.find((c) => c.toLowerCase() === 'library') ?? list[0] ?? 'Library';
+};
+
+// Figma "Publish confirm dialog" (68:198·68:212)과 같은 모양: [카테고리▾] 에 추가하시겠습니까? + 고른 책 + 추가 / 취소
+// 카테고리 알약을 누르면 목록이 펼쳐짐 → 고른 카테고리 줄(랜딩)에 책 표지가 붙음
 function ConfirmAdd({ book, onConfirm, onCancel }) {
   const ref = useRef(null);
+  const [category, setCategory] = useState(defaultCategory);
 
   useEffect(() => {
     if (!ref.current.open) ref.current.showModal(); // 첫 버튼("추가")에 포커스 → Enter로 바로 추가
@@ -193,7 +203,7 @@ function ConfirmAdd({ book, onConfirm, onCancel }) {
       aria-labelledby="book-confirm-heading"
     >
       <div className={styles.confirmHeader}>
-        <span className={styles.pill}>서재</span>
+        <CategorySelect value={category} onChange={setCategory} />
         <h2 id="book-confirm-heading" className={styles.confirmHeading}>
           에 추가하시겠습니까?
         </h2>
@@ -203,7 +213,12 @@ function ConfirmAdd({ book, onConfirm, onCancel }) {
         {book.authors && <span className={styles.meta}>{book.authors}</span>}
       </p>
       <div className={styles.confirmActions}>
-        <button type="button" className={`${styles.confirmButton} ${styles.primary}`} onClick={onConfirm}>
+        <button
+          type="button"
+          className={`${styles.confirmButton} ${styles.primary}`}
+          onClick={() => onConfirm(category)}
+          autoFocus
+        >
           추가
         </button>
         <button type="button" className={styles.confirmButton} onClick={onCancel}>

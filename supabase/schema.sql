@@ -82,8 +82,11 @@ create table if not exists public.books (
   publisher text not null default '',
   year text not null default '',
   cover text not null default '',
+  category text not null default 'Library', -- 표지가 붙을 랜딩 줄 (책 추가 창에서 고름)
   created_at timestamptz not null default now()
 );
+-- 예전에 만든 표에는 category 칸을 더함
+alter table public.books add column if not exists category text not null default 'Library';
 create unique index if not exists books_isbn on public.books (isbn) where isbn <> '';
 
 alter table public.books enable row level security;
