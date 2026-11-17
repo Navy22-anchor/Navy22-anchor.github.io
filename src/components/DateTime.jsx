@@ -17,6 +17,7 @@ const SWAP_MS = 400; // 다음 주로 넘어갈 때: 이전 주가 사라지는 
 const MOVE_DAY_PULL = 80; // 하루 보기 맨 아래(위)에서 이만큼 더 내리면(올리면) 다음 날(전날)로 // 선택한 주가 제자리로 간 뒤 나머지 주가 다 나타날 때까지
 const MAX_MARKS = 3; // 한 날짜에 보이는 예약 점 수 (넘으면 생략)
 const PICK_STEP = 5; // 예약 시각을 고르는 단위 (분)
+const EVENT_LABEL_H = 12; // 예약 선 위 곡 이름 높이 (이보다 위쪽 끝에 붙은 예약은 이름을 선 아래로)
 const hourLabel = (h) => `${h % 12 || 12} ${h % 24 < 12 ? 'AM' : 'PM'}`; // 24시는 다음 날 12 AM
 const atMinutes = (date, min) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), Math.floor(min / 60), min % 60);
 const clampPick = (min) => Math.min(24 * 60 - PICK_STEP, Math.max(0, min));
@@ -215,11 +216,14 @@ function DayEvents({ now, date, closing, onMoveDay, pick = null, onPick, events 
         ))}
         {dayEvents.map((e) => {
           const at = new Date(e.at);
+          const y = (at.getHours() + at.getMinutes() / 60) * HOUR;
           return (
             <div
               key={e.id}
               className={styles.eventLine}
-              style={{ top: (at.getHours() + at.getMinutes() / 60) * HOUR, '--event-color': e.color || 'var(--color-secondary)' }}
+              // 하루 맨 위(0시 근처)는 선 위에 곡 이름 자리가 없어 잘리므로 선 아래에
+              data-label-below={y < EVENT_LABEL_H || undefined}
+              style={{ top: y, '--event-color': e.color || 'var(--color-secondary)' }}
               title={`${timeFormat.format(at)} ${e.track.title} – ${e.track.artist}`}
             >
               <span>{e.track.title}</span>

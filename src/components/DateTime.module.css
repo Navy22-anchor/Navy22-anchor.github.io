@@ -339,6 +339,12 @@
   white-space: nowrap;
 }
 
+/* 하루 맨 위의 예약은 곡 이름을 선 아래로 */
+.eventLine[data-label-below] span {
+  top: 1px;
+  bottom: auto;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .week,
   .week[data-leaving],
