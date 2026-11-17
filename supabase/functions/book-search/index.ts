@@ -1,12 +1,12 @@
 // 책 검색 중계: 카카오 책 검색 키는 이 함수(Supabase 서버)에만 두고, 블로그 코드에는 넣지 않음
-// 블로그 → supabase.functions.invoke('book-search', { body: { query } }) → 카카오 → 결과
+// 블로그 → GET .../functions/v1/book-search?query=검색어 → 카카오 → 결과
 // 로그인한 주인(owners 표)만 부를 수 있음. 키는 `supabase secrets set KAKAO_REST_KEY=...` 로 넣음
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
 };
 
 const json = (body: unknown, status = 200) =>
@@ -26,7 +26,7 @@ function bigCover(thumbnail: string) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
-  if (req.method !== 'POST') return json({ error: 'POST만 받습니다' }, 405);
+  if (req.method !== 'GET') return json({ error: 'GET만 받습니다' }, 405);
 
   // 부른 사람이 주인인지 (블로그의 is_owner() 함수로 확인)
   const auth = req.headers.get('Authorization') ?? '';
@@ -36,8 +36,8 @@ Deno.serve(async (req) => {
   const { data: owner } = await db.rpc('is_owner');
   if (owner !== true) return json({ error: '로그인한 주인만 검색할 수 있습니다' }, 403);
 
-  const { query } = await req.json().catch(() => ({ query: '' }));
-  const q = String(query ?? '').trim().slice(0, 100);
+  // 검색어는 주소 뒤 ?query= 로 받음
+  const q = (new URL(req.url).searchParams.get('query') ?? '').trim().slice(0, 100);
   if (!q) return json({ books: [] });
 
   const key = Deno.env.get('KAKAO_REST_KEY');

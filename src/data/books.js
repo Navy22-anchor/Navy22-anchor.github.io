@@ -78,7 +78,10 @@ export async function searchBooks(query) {
   // 개발 중(Supabase 없음) 화면 확인용: window.__mockBookSearch(q) 가 있으면 그 결과를 씀. 배포 코드에는 빠짐
   if (import.meta.env.DEV && typeof window.__mockBookSearch === 'function') return window.__mockBookSearch(q);
   if (!supabase) throw new Error('Supabase가 연결되어 있어야 책을 검색할 수 있어요');
-  const { data, error } = await supabase.functions.invoke('book-search', { body: { query: q } });
+  // GET .../functions/v1/book-search?query=검색어 (로그인 토큰은 라이브러리가 자동으로 붙임)
+  const { data, error } = await supabase.functions.invoke(`book-search?query=${encodeURIComponent(q)}`, {
+    method: 'GET',
+  });
   if (error) {
     // 함수가 보낸 오류 문구가 있으면 그걸 보여 줌
     const message = await error.context?.json?.().then((body) => body.error).catch(() => null);
