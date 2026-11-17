@@ -7,7 +7,7 @@ import ProjectStrip from '../components/ProjectStrip.jsx';
 import { useBooks } from '../data/books.js';
 import { useCoverSizes } from '../data/coverSizes.js';
 import { addCategory, loadCategories, removeCategory, useCategories } from '../data/categories.js';
-import { useCanEdit } from '../data/supabase.js';
+import { useCanEdit, useSession } from '../data/supabase.js';
 import { categories as baseCategories, loadRows } from '../data/projects.js';
 import braceLeft from '../assets/brace-left.svg';
 import braceRight from '../assets/brace-right.svg';
@@ -90,6 +90,12 @@ function withBooks(rows, books, names, sizes) {
   return out;
 }
 
+// 로그인한 사람의 이름: 계정 정보의 name(또는 full_name), 없으면 이메일 @ 앞부분
+const userName = (user) => {
+  const meta = user?.user_metadata ?? {};
+  return (meta.name || meta.full_name || user?.email?.split('@')[0] || '').trim();
+};
+
 const startIndex = (row) => Math.floor((row.items.length - 1) / 2) * (row.kind === 'posts' ? 0 : 1);
 
 export default function Landing() {
@@ -110,6 +116,7 @@ export default function Landing() {
     setRows((list) => withEmptyRows(list, categories, insertingName, loadedRows));
   }, [categories, insertingName, loadedRows]);
   const editable = useCanEdit(); // 카테고리 추가·삭제는 주인(로그인)만
+  const ownerName = userName(useSession()?.user); // 로그인하면 로고가 "이름 in Hanlog"
   const [category, setCategory] = useState(categories[0]);
   const [adding, setAdding] = useState(false); // "+"를 눌러 새 카테고리 이름을 입력하는 중
   const [removing, setRemoving] = useState(false); // "−"를 눌러 지울 카테고리를 고르는 중
@@ -228,12 +235,31 @@ export default function Landing() {
 
   return (
     <>
-      <header className={styles.header} data-books={editable || undefined}>
-        <h1 className={styles.logo}>
-          <span className={styles.logoName}>Hanlog</span>
-          <span className={styles.logoSpace}> </span>
-          <span className={styles.logoBy}>by</span>
-        </h1>
+      <header className={styles.header} data-books={editable || undefined} data-visitor={!editable || undefined}>
+        {ownerName ? (
+          // 로그인: "이름 in Hanlog" (방문자 로고와 같은 모양)
+          <h1 className={`${styles.logo} ${styles.visitorLogo}`}>
+            <span className={styles.logoName}>{ownerName}</span>
+            <span className={styles.logoName}> </span>
+            <span className={styles.logoBy}>in Hanlog</span>
+          </h1>
+        ) : editable ? (
+          // Supabase 없이 이 브라우저에서만 쓰는 경우 (로그인 없음)
+          <h1 className={styles.logo}>
+            <span className={styles.logoName}>Hanlog</span>
+            <span className={styles.logoSpace}> </span>
+            <span className={styles.logoBy}>by</span>
+          </h1>
+        ) : (
+          // 방문자 (Figma "Landing first screen (1920)" 310:4661): "Login at Hanlog", Login을 누르면 로그인 화면
+          <h1 className={`${styles.logo} ${styles.visitorLogo}`}>
+            <a href="#/login" className={`${styles.plainLink} ${styles.logoName}`}>
+              Login
+            </a>
+            <span className={styles.logoName}> </span>
+            <span className={styles.logoBy}>at Hanlog</span>
+          </h1>
+        )}
 
         <DateTime className={styles.dateTime} />
 
@@ -241,28 +267,29 @@ export default function Landing() {
           <DynamicIsland />
         </div>
 
-        <nav className={styles.writeNav} aria-label="쓰기">
-          {/* "책": 카카오 책 검색으로 서재(Library 줄)에 책 추가 (주인만) */}
-          {editable && (
+        {/* 글쓰기·책은 주인만 (방문자 화면에는 없음) */}
+        {editable && (
+          <nav className={styles.writeNav} aria-label="쓰기">
+            {/* "책": 카카오 책 검색으로 책 추가 */}
             <button type="button" className={`${styles.plainLink} ${styles.navButton}`} onClick={() => setSearchingBooks(true)}>
               책
             </button>
-          )}
-          {/* 지금 고른 카테고리를 글쓰기 화면의 기본 카테고리로 (빈 칸의 카테고리에서 누르면 그 카테고리로 발행) */}
-          <a
-            href="#/write"
-            className={styles.plainLink}
-            onClick={() => {
-              try {
-                sessionStorage.setItem('hanlog:write-category', category ?? '');
-              } catch {
-                // 저장소를 못 쓰면 첫 카테고리가 기본
-              }
-            }}
-          >
-            글쓰기
-          </a>
-        </nav>
+            {/* 지금 고른 카테고리를 글쓰기 화면의 기본 카테고리로 (빈 칸의 카테고리에서 누르면 그 카테고리로 발행) */}
+            <a
+              href="#/write"
+              className={styles.plainLink}
+              onClick={() => {
+                try {
+                  sessionStorage.setItem('hanlog:write-category', category ?? '');
+                } catch {
+                  // 저장소를 못 쓰면 첫 카테고리가 기본
+                }
+              }}
+            >
+              글쓰기
+            </a>
+          </nav>
+        )}
       </header>
       {searchingBooks && <BookSearch onClose={() => setSearchingBooks(false)} />}
 
