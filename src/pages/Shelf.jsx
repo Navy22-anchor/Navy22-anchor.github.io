@@ -1,11 +1,12 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { removeBook, setSpine, useBooks } from '../data/books.js';
 import { useCanEdit } from '../data/supabase.js';
 import backIcon from '../assets/back.svg';
 import styles from './Shelf.module.css';
 
-// Figma "Library shelf (1440)" (249:2860): 카테고리를 누르면 그 카테고리의 책을 책등으로 꽂아 보여 주는 책장
+// Figma "Library shelf (1440)" (249:2860): 랜딩에서 책 표지를 누르면 그 카테고리의 책을 책등으로 꽂아 보여 주는 책장
+// 누른 책(bookId)이 골라진(솟아오른) 채로 열림
 // 책등 사진은 주인이 직접 올림 (아직 없으면 회색 칸). 고른 책은 조금 솟아오르고, 아래에 제목·저자·출판사
 const same = (a, b) => a.toLowerCase() === b.toLowerCase();
 
@@ -14,10 +15,11 @@ function goBack() {
   else window.location.hash = '#/';
 }
 
-export default function Shelf({ name }) {
+export default function Shelf({ name, bookId }) {
   const books = useBooks().filter((book) => same(book.category || 'Library', name));
   const editable = useCanEdit();
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedId, setSelectedId] = useState(bookId ?? null);
+  const spinesRef = useRef(null);
   const [status, setStatus] = useState('');
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(null); // "삭제 하겠습니까?" 창에 띄운 책
@@ -27,6 +29,15 @@ export default function Shelf({ name }) {
   const target = useRef(null); // 책등을 올릴 책
 
   const selected = books.find((book) => book.id === selectedId) ?? books[0];
+
+  // 누르고 들어온 책이 책장 밖(오른쪽)이면 보이게 스크롤
+  useEffect(() => {
+    if (!bookId) return;
+    const i = books.findIndex((book) => book.id === bookId);
+    spinesRef.current?.children[i]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    // 처음 열 때만
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const pickSpine = (book) => {
     target.current = book;
@@ -88,7 +99,7 @@ export default function Shelf({ name }) {
         <p className={styles.empty}>아직 꽂힌 책이 없어요</p>
       ) : (
         <main className={styles.shelf}>
-          <div className={styles.spines} role="listbox" aria-label={`${name} 책장`}>
+          <div ref={spinesRef} className={styles.spines} role="listbox" aria-label={`${name} 책장`}>
             {books.map((book) => (
               <button
                 key={book.id}

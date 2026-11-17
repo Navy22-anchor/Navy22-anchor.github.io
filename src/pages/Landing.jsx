@@ -50,7 +50,8 @@ const bookItem = (book, sizes) => {
   const size = sizes[book.cover];
   return {
     id: `book-${book.id}`,
-    shelf: book.category || 'Library', // 누르면 이 카테고리의 책장으로
+    // 가운데 표지를 누르면 이 카테고리의 책장으로 (그 책이 골라진 채로)
+    shelf: `${encodeURIComponent(book.category || 'Library')}/${encodeURIComponent(book.id)}`,
     src: book.cover,
     w: COVER_W,
     h: size ? Math.round((COVER_W * size[1]) / size[0]) : 400,
@@ -134,16 +135,9 @@ export default function Landing() {
     stripRef.current?.goTo(i);
   }, [rows]);
 
-  // 책이 있는 카테고리(와 Library)는 누르면 책장 페이지로 (Figma 249:2860)
-  const hasShelf = (name) => same(name, 'Library') || books.some((book) => same(book.category || 'Library', name));
-  const openShelf = (name) => {
-    window.location.hash = `#/shelf/${encodeURIComponent(name)}`;
-  };
-
   // 삭제 모드에서 카테고리를 누르면 확인 카드부터
   const onCategoryClick = (name) => {
     if (removing) setConfirming(name);
-    else if (hasShelf(name)) openShelf(name);
     else goToCategory(name);
   };
 
@@ -196,7 +190,7 @@ export default function Landing() {
 
   const openItem = useCallback((it, row) => {
     if (row.kind === 'posts') window.location.hash = `#/post/${it.id}`;
-    else if (it.shelf) window.location.hash = `#/shelf/${encodeURIComponent(it.shelf)}`;
+    else if (it.shelf) window.location.hash = `#/shelf/${it.shelf}`;
   }, []);
 
   // 가로 이동: Shift + 휠, 트랙패드 가로 스와이프, ←/→ 키
