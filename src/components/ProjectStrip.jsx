@@ -136,16 +136,20 @@ export default function ProjectStrip({ ref, rows, initialRow = 0, indexFor, onAc
   }, [activeIndex, onActiveChange]);
 
   useEffect(() => {
+    // 창(책 검색·삭제 확인 같은 <dialog>)이 떠 있으면 뒤의 줄은 움직이지 않음
+    const modalOpen = () => !!document.querySelector('dialog[open]');
     const onWheel = (e) => {
       // Shift + 휠과 가로 스와이프는 가로 넘기기용, Ctrl + 휠은 확대용
       if (e.ctrlKey || e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
       if (e.target.closest?.('[role="dialog"]')) return; // 달력 하루 일정은 그 안에서 스크롤
+      if (modalOpen()) return; // 창 안 목록은 그 안에서 스크롤
       e.preventDefault();
       const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1;
       moveBy(WHEEL_DIRECTION * e.deltaY * unit);
     };
     const onKey = (e) => {
       if (e.target.closest?.('input, textarea, [role="dialog"]')) return; // 글자 입력·달력 사용 중에는 넘기지 않음
+      if (modalOpen()) return;
       if (insertingRef.current) return;
       // ↓는 휠을 내릴 때와 같은 방향
       if (e.key === 'ArrowDown') animateTo(Math.round(posRef.current) + WHEEL_DIRECTION);
