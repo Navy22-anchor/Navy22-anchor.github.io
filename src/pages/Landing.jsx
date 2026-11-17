@@ -3,6 +3,7 @@ import BookSearch from '../components/BookSearch.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import DateTime from '../components/DateTime.jsx';
 import DynamicIsland from '../components/DynamicIsland.jsx';
+import LogoutWord from '../components/LogoutWord.jsx';
 import ProjectStrip from '../components/ProjectStrip.jsx';
 import { useBooks } from '../data/books.js';
 import { useCoverSizes } from '../data/coverSizes.js';
@@ -237,11 +238,13 @@ export default function Landing() {
     <>
       <header className={styles.header} data-books={editable || undefined} data-visitor={!editable || undefined}>
         {ownerName ? (
-          // 로그인: "이름 in Hanlog" (방문자 로고와 같은 모양)
+          // 로그인: "이름 in Hanlog" (방문자 로고와 같은 모양). "in"에 마우스를 올리면 빨간 "out" → 누르면 로그아웃
           <h1 className={`${styles.logo} ${styles.visitorLogo}`}>
             <span className={styles.logoName}>{ownerName}</span>
             <span className={styles.logoName}> </span>
-            <span className={styles.logoBy}>in Hanlog</span>
+            <span className={styles.logoBy}>
+              <LogoutWord /> Hanlog
+            </span>
           </h1>
         ) : editable ? (
           // Supabase 없이 이 브라우저에서만 쓰는 경우 (로그인 없음)

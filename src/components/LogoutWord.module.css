@@ -1,0 +1,63 @@
+/* "in" ↔ 빨간 "out": 칸 밖은 잘라서, 아래로 빠지는 in과 위에서 들어오는 out이 칸 안에서만 보임 */
+.swap {
+  position: relative;
+  display: inline-block;
+  width: var(--in-w, auto);
+  overflow: hidden;
+  vertical-align: text-top; /* 칸 위쪽을 글자 위쪽에 맞춤 → "Hanlog"와 같은 기준선 */
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  transition: width 0.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.in,
+.out {
+  display: inline-block;
+  transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* out은 in 자리 위(칸 밖)에서 대기 */
+.out {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: #ff0909; /* 삭제 확인 창의 "예"와 같은 빨강 */
+  transform: translateY(-100%);
+}
+
+.swap:hover,
+.swap:focus-visible {
+  width: var(--out-w, auto);
+}
+
+.swap:hover .in,
+.swap:focus-visible .in {
+  transform: translateY(100%);
+}
+
+.swap:hover .out,
+.swap:focus-visible .out {
+  transform: translateY(0);
+}
+
+.swap:focus-visible {
+  outline: none;
+}
+
+.swap:disabled {
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swap,
+  .in,
+  .out {
+    transition: none;
+  }
+}
