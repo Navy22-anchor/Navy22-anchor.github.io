@@ -36,7 +36,7 @@ const set = (next) => {
 async function refresh() {
   const { data, error } = await supabase
     .from('books')
-    .select('id, isbn, title, authors, publisher, year, cover, category')
+    .select('id, isbn, title, authors, publisher, year, cover, category, spine')
     .order('created_at');
   if (!error) set(data);
 }
@@ -69,6 +69,50 @@ export async function addBook({ isbn = '', title, authors = '', publisher = '', 
   const { error } = await supabase.from('books').insert(book);
   await refresh();
   if (error) throw error;
+}
+
+// 책등 사진: 높이 1400px 넘으면 줄여서 JPEG로 (휴대폰 사진은 너무 큼)
+const SPINE_MAX_H = 1400;
+async function shrink(file) {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, SPINE_MAX_H / bitmap.height);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('사진을 읽지 못했어요'))), 'image/jpeg', 0.9),
+  );
+}
+
+const readAsDataUrl = (blob) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+
+// 책등 사진 올리기 (주인만): Supabase Storage book-spines 에 올리고 books.spine 에 주소 저장
+// Supabase가 없으면 이 브라우저에만 저장
+export async function setSpine(book, file) {
+  const blob = await shrink(file);
+  if (!supabase) {
+    const spine = await readAsDataUrl(blob);
+    return set(books.map((b) => (b.id === book.id ? { ...b, spine } : b)));
+  }
+  const path = `${book.id}-${Date.now()}.jpg`; // 바꿀 때마다 새 이름 → 브라우저 캐시에 옛 사진이 남지 않음
+  const storage = supabase.storage.from('book-spines');
+  const { error: uploadError } = await storage.upload(path, blob, { contentType: 'image/jpeg' });
+  if (uploadError) throw uploadError;
+  const { data } = storage.getPublicUrl(path);
+  const { error } = await supabase.from('books').update({ spine: data.publicUrl }).eq('id', book.id);
+  if (error) throw error;
+  // 예전 사진은 지움 (실패해도 그만)
+  const old = book.spine?.split('/book-spines/')[1];
+  if (old) storage.remove([old]).catch(() => {});
+  await refresh();
 }
 
 // 카카오 책 검색 (Edge Function 경유). [{ isbn, title, authors, publisher, year, thumbnail, cover }]

@@ -1,0 +1,162 @@
+/* Figma "Library shelf (1440)" (249:2860)
+   책등 높이 687 (고른 책은 733으로 솟음), 아래쪽을 맞춰 나란히. 왼쪽 여백 64, 아래 12 띄워 설명 18px */
+.page {
+  --spine-h: clamp(320px, calc(100vh - 213px), 687px);
+  --spine-raised: calc(var(--spine-h) * 733 / 687);
+
+  min-height: 100vh;
+  color: var(--color-text);
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+}
+
+/* 상단 바: Blog Reading Page와 같음 (양옆 64px 묶음 사이에 카테고리 알약) */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 32px;
+}
+
+.headerSide {
+  display: flex;
+  width: 64px;
+}
+
+.iconButton {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.iconButton img {
+  display: block;
+  filter: var(--color-icon-filter);
+}
+
+.pill {
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--color-fill);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.shelf {
+  padding: 6px 64px 48px;
+}
+
+/* 책등: 아래쪽 맞춤, 틈 없이 나란히. 많으면 가로로 스크롤 */
+.spines {
+  display: flex;
+  align-items: flex-end;
+  height: var(--spine-raised);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.spines::-webkit-scrollbar {
+  display: none;
+}
+
+.spine {
+  display: block;
+  flex-shrink: 0;
+  height: var(--spine-h);
+  transition: height 0.2s ease;
+}
+
+.spine img {
+  display: block;
+  width: auto;
+  height: 100%;
+  user-select: none;
+}
+
+/* 책등 사진이 아직 없으면 회색 칸 (61 × 687 비율) */
+.spine[data-empty] {
+  width: calc(var(--spine-h) * 61 / 687);
+  background: var(--color-placeholder);
+}
+
+/* 회색 칸이 이어지면 한 덩어리로 보이지 않게 가는 틈 */
+.spine[data-empty] + .spine[data-empty] {
+  box-shadow: inset 1px 0 0 var(--color-bg);
+}
+
+.spine[aria-selected='true'] {
+  height: var(--spine-raised);
+}
+
+.spine[data-empty][aria-selected='true'] {
+  width: calc(var(--spine-raised) * 61 / 687);
+}
+
+.spine:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: -2px;
+}
+
+/* 고른 책: 제목, 저자, 출판사 */
+.caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  margin-top: 12px;
+}
+
+.info {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.upload {
+  color: var(--color-secondary);
+  font-size: 13px;
+  text-decoration: underline;
+}
+
+.upload:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.status {
+  width: 100%;
+  margin: 0;
+  color: var(--color-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.empty {
+  margin: 0;
+  padding: 120px 16px;
+  color: var(--color-secondary);
+  font-size: 15px;
+  text-align: center;
+}
+
+@media (max-width: 767px) {
+  .page {
+    --spine-h: clamp(240px, calc(100vh - 220px), 520px);
+  }
+
+  .header {
+    padding: 16px;
+  }
+
+  .shelf {
+    padding: 6px 16px 32px;
+  }
+
+  .info {
+    font-size: 16px;
+  }
+}

@@ -83,10 +83,13 @@ create table if not exists public.books (
   year text not null default '',
   cover text not null default '',
   category text not null default 'Library', -- 표지가 붙을 랜딩 줄 (책 추가 창에서 고름)
+  spine text not null default '', -- 책등 사진 주소 (Storage book-spines)
   created_at timestamptz not null default now()
 );
 -- 예전에 만든 표에는 category 칸을 더함
 alter table public.books add column if not exists category text not null default 'Library';
+-- 책등 사진 주소 (책장 페이지에서 주인이 직접 올림, 비어 있으면 회색 칸)
+alter table public.books add column if not exists spine text not null default '';
 create unique index if not exists books_isbn on public.books (isbn) where isbn <> '';
 
 alter table public.books enable row level security;
@@ -111,3 +114,19 @@ end $$;
 
 -- ↓ 계정을 만든 뒤(Authentication → Users → Add user) 이메일을 바꿔서 이 줄만 따로 한 번 실행
 -- insert into public.owners (user_id) select id from auth.users where email = '내 이메일' on conflict do nothing;
+
+-- 책등 사진 보관함 (Storage): 누구나 보기, 올리기·바꾸기·지우기는 주인만
+insert into storage.buckets (id, name, public)
+values ('book-spines', 'book-spines', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "책등 주인만 올리기" on storage.objects;
+drop policy if exists "책등 주인만 바꾸기" on storage.objects;
+drop policy if exists "책등 주인만 지우기" on storage.objects;
+create policy "책등 주인만 올리기" on storage.objects for insert to authenticated
+  with check (bucket_id = 'book-spines' and (select public.is_owner()));
+create policy "책등 주인만 바꾸기" on storage.objects for update to authenticated
+  using (bucket_id = 'book-spines' and (select public.is_owner()))
+  with check (bucket_id = 'book-spines' and (select public.is_owner()));
+create policy "책등 주인만 지우기" on storage.objects for delete to authenticated
+  using (bucket_id = 'book-spines' and (select public.is_owner()));
