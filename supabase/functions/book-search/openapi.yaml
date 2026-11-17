@@ -1,0 +1,173 @@
+# book-search Edge Function 문서 (OpenAPI 3.0 / Swagger)
+# 보기: https://editor.swagger.io 에 이 파일 내용을 붙여 넣기
+# 코드: supabase/functions/book-search/index.ts — 함수를 고치면 이 문서도 같이 맞춰 주세요
+openapi: 3.0.3
+info:
+  title: Hanlog book-search
+  version: 1.1.0
+  description: |
+    카카오 책 검색을 대신 불러 주는 Supabase Edge Function.
+    카카오 REST 키는 이 함수(Supabase Secrets의 `KAKAO_REST_KEY`)에만 있고 블로그 코드에는 없습니다.
+
+    **흐름**: 블로그 → `GET /functions/v1/book-search?query=…` → 주인 확인(`is_owner()`)
+    → 카카오 `GET https://dapi.kakao.com/v3/search/book?size=10&query=…` → 필요한 항목만 추려 응답
+
+    **누가 부를 수 있나**: `owners` 표에 등록된 계정으로 로그인한 사람만.
+    블로그에서는 `supabase.functions.invoke('book-search?query=…', { method: 'GET' })`가
+    로그인 토큰을 자동으로 붙입니다.
+
+    **로그**: 검색할 때마다 카카오 원본 응답을 남깁니다 (대시보드 → Edge Functions → book-search → Logs).
+servers:
+  - url: https://{project}.supabase.co/functions/v1
+    variables:
+      project:
+        default: your-project-ref
+        description: Supabase 프로젝트 ID (.env 의 Supabase 주소 https://○○○.supabase.co 의 ○○○)
+tags:
+  - name: books
+    description: 책 검색
+paths:
+  /book-search:
+    get:
+      tags: [books]
+      summary: 책 검색
+      description: |
+        제목·ISBN·출판사·인물(저자·번역자)에서 찾아 최대 10권을 돌려줍니다 (카카오 `target`을 정하지 않은 기본 검색).
+        검색어는 앞뒤 공백을 지우고 100자까지만 씁니다.
+      operationId: searchBooks
+      security:
+        - apikey: []
+          ownerToken: []
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: 검색어. 비어 있으면 카카오에 묻지 않고 빈 목록을 돌려줍니다.
+          schema:
+            type: string
+            maxLength: 100
+          example: 신경망
+      responses:
+        '200':
+          description: 검색 결과 (없으면 빈 배열)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResult'
+              example:
+                books:
+                  - isbn: '9791161752006'
+                    title: 신경망 설계
+                    authors: 마틴 헤이건, 하워드 데무스
+                    publisher: 에이콘출판
+                    year: '2018'
+                    thumbnail: https://search1.kakaocdn.net/thumb/R120x174.q85/?fname=http%3A%2F%2Ft1.daumcdn.net%2Flbook%2Fimage%2F1234
+                    cover: https://t1.daumcdn.net/lbook/image/1234
+        '401':
+          description: |
+            `apikey` 또는 `Authorization` 헤더가 없거나 잘못됨.
+            함수 코드가 아니라 Supabase 앞단(게이트웨이)이 돌려주는 응답이라 모양이 다를 수 있습니다.
+        '403':
+          description: 로그인하지 않았거나 owners 표에 없는 계정
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 로그인한 주인만 검색할 수 있습니다
+        '405':
+          description: GET 이 아닌 요청 (POST 등)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: GET만 받습니다
+        '500':
+          description: Supabase Secrets 에 KAKAO_REST_KEY 가 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: KAKAO_REST_KEY가 설정되지 않았습니다
+        '502':
+          description: 카카오가 오류로 응답함 (괄호 안은 카카오의 상태 코드. 예 401 = 카카오 키가 틀림)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 카카오 검색 실패 (401)
+    options:
+      tags: [books]
+      summary: CORS 사전 요청
+      description: 브라우저가 다른 주소(블로그)에서 부르기 전에 보내는 확인 요청. 허용 메서드는 GET, OPTIONS.
+      operationId: searchBooksPreflight
+      security: []
+      responses:
+        '200':
+          description: 허용
+          headers:
+            Access-Control-Allow-Origin:
+              schema: { type: string, example: '*' }
+            Access-Control-Allow-Methods:
+              schema: { type: string, example: 'GET, OPTIONS' }
+            Access-Control-Allow-Headers:
+              schema: { type: string, example: 'authorization, x-client-info, apikey, content-type' }
+components:
+  securitySchemes:
+    apikey:
+      type: apiKey
+      in: header
+      name: apikey
+      description: Supabase 공개용 키 (.env 의 Publishable_Key). 블로그 코드에도 들어 있는 공개 값
+    ownerToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: '로그인한 주인의 접속 토큰 (`Authorization: Bearer …`). 로그인하면 Supabase 라이브러리가 붙임'
+  schemas:
+    Book:
+      type: object
+      required: [isbn, title, authors, publisher, year, thumbnail, cover]
+      properties:
+        isbn:
+          type: string
+          description: ISBN. 카카오가 10자리·13자리를 함께 주면 13자리, 없으면 빈 문자열
+        title:
+          type: string
+          description: 책 제목
+        authors:
+          type: string
+          description: 저자들을 ", "로 이은 것 (카카오는 배열로 줌)
+        publisher:
+          type: string
+          description: 출판사
+        year:
+          type: string
+          description: 출간 연도 4자리 (카카오 datetime 의 앞 4글자). 없으면 빈 문자열
+        thumbnail:
+          type: string
+          format: uri
+          description: 카카오 썸네일 (120×174 작은 사본, https 로 바꿈). 검색 창 결과 목록에 씀
+        cover:
+          type: string
+          format: uri
+          description: 큰 표지. 썸네일 주소 안의 원본(fname)이 있으면 그것, 없으면 썸네일. 서재(Library 줄)에 씀
+    SearchResult:
+      type: object
+      required: [books]
+      properties:
+        books:
+          type: array
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/Book'
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: 화면(검색 창 아래)에 그대로 보여 주는 오류 문구
