@@ -159,3 +159,105 @@
   font-size: 12px;
   line-height: 1.5;
 }
+
+/* 추가 확인 창: Figma "Publish confirm dialog" (68:198)과 같은 카드. 400 폭, 가운데 정렬, 칸 사이 24 */
+.confirm {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: min(400px, calc(100vw - 32px));
+  height: fit-content;
+  padding: 32px 28px 28px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+  box-shadow:
+    0 4px 8px rgb(0 0 0 / 0.08),
+    0 16px 40px rgb(0 0 0 / 0.16);
+}
+
+.confirm:not([open]) {
+  display: none;
+}
+
+/* 검색 창 위에 한 겹 더: 바탕은 살짝만 어둡게 */
+.confirm::backdrop {
+  background: rgb(0 0 0 / 0.12);
+}
+
+.confirmHeader {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.pill {
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--color-fill);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.confirmHeading {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* 고른 책: 제목 + 저자 (가운데) */
+.confirmBook {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  margin: -12px 0 0;
+  text-align: center;
+}
+
+.confirmTitle {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.confirmBook .meta {
+  max-width: 100%;
+}
+
+.confirmActions {
+  display: flex;
+  gap: 8px;
+}
+
+.confirmButton {
+  padding: 8px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-fill);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* "추가": 발행 버튼과 같은 짙은 초록 */
+.confirmButton.primary {
+  background: rgb(0 36 27);
+  color: var(--color-white);
+}
