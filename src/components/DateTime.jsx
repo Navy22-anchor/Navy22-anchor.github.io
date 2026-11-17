@@ -63,7 +63,8 @@ function Chevron({ direction }) {
 // 맨 아래에서 더 내리면 다음 날 0시부터, 맨 위에서 더 올리면 전날 밤 끝부터 보여 줌
 // pick(분)이 있으면 예약 모드 (Figma 231:2699): 고른 시각 줄은 가운데에 고정되고, 일정을 스크롤하면
 // 줄 아래로 지나가는 시각이 고른 시각이 됨. 누른 시각은 줄로 끌려오고, ↑↓(Shift는 1시간)로도 옮김
-function DayEvents({ now, date, closing, onMoveDay, pick = null, onPick }) {
+// events: 노래 예약 [{ at, color, track }]. 그날 예약은 재생 시각에 앨범 대표 색 선 + 곡 이름으로 표시
+function DayEvents({ now, date, closing, onMoveDay, pick = null, onPick, events = [] }) {
   const scrollRef = useRef(null);
   const timelineRef = useRef(null);
   const [moved, setMoved] = useState(null); // null | 1 (다음 날) | -1 (전날)
@@ -75,6 +76,7 @@ function DayEvents({ now, date, closing, onMoveDay, pick = null, onPick }) {
   const dayKey = date.toDateString();
   const picking = pick != null;
   const pointer = useRef(null);
+  const dayEvents = events.filter((e) => sameDay(new Date(e.at), date));
   const toY = (min) => (min / 60) * HOUR;
   // 위아래 여백이 보이는 높이의 절반이라, 스크롤 위치가 곧 가운데 줄의 시각
   const pickFromScroll = () => clampPick(Math.round(((scrollRef.current.scrollTop / HOUR) * 60) / PICK_STEP) * PICK_STEP);
@@ -211,6 +213,19 @@ function DayEvents({ now, date, closing, onMoveDay, pick = null, onPick }) {
             <span>{hourLabel(h)}</span>
           </div>
         ))}
+        {dayEvents.map((e) => {
+          const at = new Date(e.at);
+          return (
+            <div
+              key={e.id}
+              className={styles.eventLine}
+              style={{ top: (at.getHours() + at.getMinutes() / 60) * HOUR, '--event-color': e.color || 'var(--color-secondary)' }}
+              title={`${timeFormat.format(at)} ${e.track.title} – ${e.track.artist}`}
+            >
+              <span>{e.track.title}</span>
+            </div>
+          );
+        })}
         {!picking && isToday && (
           <div className={styles.nowLine} style={{ top: nowY }}>
             <span>{timeFormat.format(now).replace(/ [AP]M$/, '')}</span>
@@ -223,7 +238,8 @@ function DayEvents({ now, date, closing, onMoveDay, pick = null, onPick }) {
 
 // schedule이면 예약 모드: 날짜를 한 번 누르면 바로 하루 보기가 열리고, 시각을 고른 뒤 Enter로 onConfirm
 // marks: 날짜(toDateString) → 그날 예약들의 앨범 색 목록. 날짜 아래에 작은 점으로 (최대 3개)
-function Calendar({ now, selected, onSelect, phase, setPhase, schedule = false, label = '달력', pick, onPick, onConfirm, marks }) {
+// events: 노래 예약 목록 (하루 보기에서 재생 시각에 선으로)
+function Calendar({ now, selected, onSelect, phase, setPhase, schedule = false, label = '달력', pick, onPick, onConfirm, marks, events }) {
   const [view, setView] = useState({ year: selected.getFullYear(), month: selected.getMonth() });
   const [dayWeek, setDayWeek] = useState(null);
   const [leaving, setLeaving] = useState(null); // 하루 보기에서 주가 바뀔 때 사라지는 이전 주 { year, month, w, dir, selected }
@@ -426,6 +442,7 @@ function Calendar({ now, selected, onSelect, phase, setPhase, schedule = false, 
             onMoveDay={moveDay}
             pick={schedule ? pick : null}
             onPick={onPick}
+            events={events}
           />
         )}
         {/* 사라지는 이전 주: 새 주 자리에 겹쳐 그림 (맨 뒤에 둬서 첫 줄 계산에 끼지 않게) */}
@@ -450,7 +467,7 @@ function Calendar({ now, selected, onSelect, phase, setPhase, schedule = false, 
 
 // 노래 예약용 달력 (아일랜드 검색 결과의 타이머). 날짜 → 시각(줄 색은 --dt-red로 바꿈) → Enter
 // Esc: 하루 보기면 달력으로, 달력이면 onClose
-export function ScheduleCalendar({ className = '', style, label, marks, onConfirm, onClose }) {
+export function ScheduleCalendar({ className = '', style, label, marks, events, onConfirm, onClose }) {
   const now = useNow();
   const [selected, setSelected] = useState(now);
   const [phase, setPhase] = useState('month');
@@ -477,6 +494,7 @@ export function ScheduleCalendar({ className = '', style, label, marks, onConfir
         schedule
         label={`${label} 재생 예약`}
         marks={marks}
+        events={events}
         pick={pick}
         onPick={setPick}
         onConfirm={() => onConfirm(atMinutes(selected, pick))}
@@ -537,6 +555,7 @@ export default function DateTime({ className = '' }) {
           phase={phase}
           setPhase={setPhase}
           marks={scheduleMarks(schedules)}
+          events={schedules}
         />
       )}
     </div>

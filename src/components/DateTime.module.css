@@ -315,6 +315,30 @@
   border-top: 1px solid var(--dt-red);
 }
 
+/* 노래 예약: 재생 시각에 앨범 대표 색 선, 선 바로 위 오른쪽에 곡 이름 (시간 글자 칸은 비워 둠) */
+.eventLine {
+  position: absolute;
+  left: calc(11.2px + 26px + 4.2px);
+  right: 11.2px;
+  height: 0;
+  border-top: 1.5px solid var(--event-color);
+  pointer-events: auto;
+}
+
+.eventLine span {
+  position: absolute;
+  right: 0;
+  bottom: 1.5px;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--event-color);
+  font-size: 7.7px;
+  font-weight: 590;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .week,
   .week[data-leaving],
