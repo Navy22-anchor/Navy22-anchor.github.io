@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import BookSearch from '../components/BookSearch.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import DateTime from '../components/DateTime.jsx';
 import DynamicIsland from '../components/DynamicIsland.jsx';
 import ProjectStrip from '../components/ProjectStrip.jsx';
+import { useBooks } from '../data/books.js';
 import { addCategory, loadCategories, removeCategory, useCategories } from '../data/categories.js';
 import { useCanEdit } from '../data/supabase.js';
 import { categories as baseCategories, loadRows } from '../data/projects.js';
@@ -40,11 +42,30 @@ function withEmptyRows(list, names, skip, source = []) {
     : [...rows, ...missing.map(emptyRow)];
 }
 
+// 서재 책 → Library 줄의 사진 칸 (크기는 다른 책 표지와 같은 폭 279, 표지 비율로 높이)
+const bookItem = (book) => ({
+  id: `book-${book.id}`,
+  src: book.cover,
+  w: 279,
+  h: 400,
+  label: [book.title, book.authors, book.publisher].filter(Boolean).join(', '),
+});
+
 const startIndex = (row) => Math.floor((row.items.length - 1) / 2) * (row.kind === 'posts' ? 0 : 1);
 
 export default function Landing() {
   const [{ rows: loadedRows, initialRow }] = useState(loadRows);
-  const [rows, setRows] = useState(() => withEmptyRows(loadedRows, loadCategories()));
+  const [rowList, setRows] = useState(() => withEmptyRows(loadedRows, loadCategories()));
+  // "책" 검색 창에서 서재에 추가한 책은 Library 줄 끝에 표지로 붙임
+  const books = useBooks();
+  const rows = useMemo(
+    () =>
+      books.length === 0
+        ? rowList
+        : rowList.map((row) => (row.id === 'library' ? { ...row, items: [...row.items, ...books.map(bookItem)] } : row)),
+    [rowList, books],
+  );
+  const [searchingBooks, setSearchingBooks] = useState(false);
   const categories = useCategories();
   const [insertingName, setInsertingName] = useState(null); // 빈 줄을 끼우는 중인 카테고리 이름
   // 카테고리 목록이 바뀌면(다른 컴퓨터에서 추가·삭제 포함) 빈 줄도 맞춤
@@ -169,7 +190,7 @@ export default function Landing() {
 
   return (
     <>
-      <header className={styles.header}>
+      <header className={styles.header} data-books={editable || undefined}>
         <h1 className={styles.logo}>
           <span className={styles.logoName}>Hanlog</span>
           <span className={styles.logoSpace}> </span>
@@ -182,21 +203,30 @@ export default function Landing() {
           <DynamicIsland />
         </div>
 
-        {/* 지금 고른 카테고리를 글쓰기 화면의 기본 카테고리로 (빈 칸의 카테고리에서 누르면 그 카테고리로 발행) */}
-        <a
-          href="#/write"
-          className={`${styles.plainLink} ${styles.writeNav}`}
-          onClick={() => {
-            try {
-              sessionStorage.setItem('hanlog:write-category', category ?? '');
-            } catch {
-              // 저장소를 못 쓰면 첫 카테고리가 기본
-            }
-          }}
-        >
-          글쓰기
-        </a>
+        <nav className={styles.writeNav} aria-label="쓰기">
+          {/* "책": 카카오 책 검색으로 서재(Library 줄)에 책 추가 (주인만) */}
+          {editable && (
+            <button type="button" className={`${styles.plainLink} ${styles.navButton}`} onClick={() => setSearchingBooks(true)}>
+              책
+            </button>
+          )}
+          {/* 지금 고른 카테고리를 글쓰기 화면의 기본 카테고리로 (빈 칸의 카테고리에서 누르면 그 카테고리로 발행) */}
+          <a
+            href="#/write"
+            className={styles.plainLink}
+            onClick={() => {
+              try {
+                sessionStorage.setItem('hanlog:write-category', category ?? '');
+              } catch {
+                // 저장소를 못 쓰면 첫 카테고리가 기본
+              }
+            }}
+          >
+            글쓰기
+          </a>
+        </nav>
       </header>
+      {searchingBooks && <BookSearch onClose={() => setSearchingBooks(false)} />}
 
       <ul className={styles.categories} aria-label="카테고리" data-removing={removing || undefined}>
         {/* Figma "minus" (157:1609): 목록 바로 위. 누르면 지울 카테고리를 고르는 상태 */}

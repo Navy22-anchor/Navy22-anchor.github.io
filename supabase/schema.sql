@@ -1,4 +1,4 @@
--- Hanlog: 노래 예약·카테고리 표
+-- Hanlog: 노래 예약·카테고리·서재 책 표
 -- Supabase 대시보드 → SQL Editor 에 통째로 붙여넣고 Run.
 -- 읽기는 누구나(블로그 방문자), 쓰기는 owners 표에 등록된 계정만.
 -- 여러 번 실행해도 괜찮게 만들어 둠.
@@ -70,6 +70,39 @@ begin
   end if;
   if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'categories') then
     alter publication supabase_realtime add table public.categories;
+  end if;
+end $$;
+
+-- 서재 책: "책" 검색 창에서 고른 책 (카카오 책 검색 결과). 첫 화면 Library 칸에 표지로 보임
+create table if not exists public.books (
+  id uuid primary key default gen_random_uuid(),
+  isbn text,
+  title text not null,
+  authors text not null default '',
+  publisher text not null default '',
+  year text not null default '',
+  cover text not null default '',
+  created_at timestamptz not null default now()
+);
+create unique index if not exists books_isbn on public.books (isbn) where isbn <> '';
+
+alter table public.books enable row level security;
+grant select on public.books to anon, authenticated;
+grant insert, update, delete on public.books to authenticated;
+
+drop policy if exists "누구나 읽기" on public.books;
+drop policy if exists "주인만 추가" on public.books;
+drop policy if exists "주인만 수정" on public.books;
+drop policy if exists "주인만 삭제" on public.books;
+create policy "누구나 읽기" on public.books for select to anon, authenticated using (true);
+create policy "주인만 추가" on public.books for insert to authenticated with check ((select public.is_owner()));
+create policy "주인만 수정" on public.books for update to authenticated using ((select public.is_owner())) with check ((select public.is_owner()));
+create policy "주인만 삭제" on public.books for delete to authenticated using ((select public.is_owner()));
+
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'books') then
+    alter publication supabase_realtime add table public.books;
   end if;
 end $$;
 

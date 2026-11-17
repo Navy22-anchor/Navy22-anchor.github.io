@@ -3,3 +3,6 @@ dist/
 *.zip
 
 .env
+
+# Supabase CLI 로컬 정보 (연결한 프로젝트 등)
+supabase/.temp/

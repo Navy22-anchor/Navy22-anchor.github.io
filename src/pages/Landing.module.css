@@ -55,7 +55,7 @@
 .island {
   position: absolute;
   top: 19px;
-  right: 5.52%; /* (1920 - 1814) / 1920 */
+  right: var(--island-right);
   transform: scale(0.7);
   transform-origin: top right;
   --island-calendar-scale: calc(1 / 0.7);
@@ -65,19 +65,39 @@
 .dateTime {
   position: absolute;
   top: 20px;
-  right: calc(5.52% + 133px + 25px);
+  right: calc(var(--island-right) + 133px + 25px);
 }
 
 .writeNav {
   position: absolute;
   top: 20px;
   right: 30px; /* 1890 = 1920 - 30 */
+  display: flex;
+  gap: 24px; /* "책"  "글쓰기" */
   line-height: normal;
+}
+
+.header[data-books] {
+  --nav-w: 88px;
+}
+
+/* "책": 글쓰기 링크와 똑같이 보이는 글자 버튼 */
+.navButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 
 /* 아일랜드가 가운데에서 펼쳐지면 양옆이 물러남 (Figma "Island hover motion" 92:652).
    한쪽으로 늘어나는 폭 = (367 - 190) / 2 × 0.7 ≈ 62px */
 .header {
+  /* 아일랜드 오른쪽 끝: 1920에서 x 1814 (5.52%). 화면이 좁아도 오른쪽 위 "책 글쓰기"와는 30px 띄움
+     --nav-w: "글쓰기" 폭, "책"이 보이면(주인) "책 글쓰기" 폭 */
+  --nav-w: 48px;
+  --island-right: max(5.52%, calc(30px + var(--nav-w) + 30px));
   --island-push: 62px;
   --island-spring: linear(0, 0.046, 0.157, 0.299, 0.449, 0.591, 0.716, 0.819, 0.899, 0.959, 1, 1.026, 1.04, 1.046, 1.045, 1.041, 1.035, 1.028, 1.021, 1.015, 1.01, 1.006, 1.003, 1.001, 0.999, 0.998, 0.998, 0.998, 0.998, 0.998, 1);
 }

@@ -1,0 +1,161 @@
+/* Figma "Book search window" (306:2918): 참고문헌 입력창과 같은 카드. 560 폭, 위아래 32·28, 양옆 28, 칸 사이 16 */
+.dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(640px, calc(100vh - 64px));
+  height: fit-content;
+  padding: 32px 28px 28px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+  box-shadow:
+    0 4px 8px rgb(0 0 0 / 0.08),
+    0 16px 40px rgb(0 0 0 / 0.16);
+}
+
+.dialog:not([open]) {
+  display: none;
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 0.3);
+}
+
+/* 닫기 ×: 오른쪽 위 (참고문헌 입력창과 같은 자리) */
+.close {
+  position: absolute;
+  top: 7px;
+  right: 9px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--color-secondary);
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.close:hover {
+  opacity: 1;
+}
+
+/* 검색 칸: 회색 칸 안에 돋보기 + 입력 */
+.field {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--color-fill);
+}
+
+.field:focus-within {
+  box-shadow: inset 0 0 0 1.5px var(--color-muted, var(--color-secondary));
+}
+
+.lens {
+  flex-shrink: 0;
+  color: var(--color-secondary);
+}
+
+.field input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.field input::placeholder {
+  color: var(--color-secondary);
+  opacity: 1;
+}
+
+/* 결과: 줄마다 표지 44×64 + 제목·저자, 고른 줄은 회색 바탕 */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.result[aria-selected='true'] {
+  background: var(--color-fill);
+}
+
+.cover {
+  display: block;
+  flex-shrink: 0;
+  width: 44px;
+  height: 64px;
+  border-radius: 2px;
+  background: var(--color-placeholder, #d9d9d9);
+  object-fit: cover;
+}
+
+.info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.meta {
+  overflow: hidden;
+  color: var(--color-secondary);
+  font-size: 13px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.owned {
+  flex-shrink: 0;
+  color: var(--color-secondary);
+  font-size: 12px;
+}
+
+.hint {
+  flex-shrink: 0;
+  margin: 0;
+  color: var(--color-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
