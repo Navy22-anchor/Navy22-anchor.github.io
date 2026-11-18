@@ -1,11 +1,26 @@
 <!doctype html>
 <html lang="ko">
   <head>
-    <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-5K7N6F79"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
+      // 방문 통계(Google Tag Manager → 애널리틱스)는 주인 기기와 개발 서버에서는 아예 불러오지 않음
+      // 'hanlog:no-track' 은 관리자로 로그인했을 때 src/data/supabase.js 가 이 브라우저에 남기는 표시 (로그아웃해도 남음)
+      (function () {
+        var host = location.hostname;
+        var skip = host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+        try {
+          skip = skip || !!localStorage.getItem('hanlog:no-track');
+        } catch (e) {
+          // 저장소를 못 쓰면 표시를 모르니 그대로 셈
+        }
+        if (skip) return;
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-5K7N6F79';
+        document.head.appendChild(script);
+      })();
     </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />

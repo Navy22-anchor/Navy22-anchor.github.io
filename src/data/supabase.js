@@ -77,10 +77,31 @@ function linkLogin(next) {
   return amr.some((entry) => entry.method === 'recovery') ? 'recovery' : 'invite';
 }
 
+// 관리자로 로그인한 기기는 방문 통계에서 빼도록 표시를 남김 (index.html 이 읽음, 로그아웃해도 지우지 않음)
+// 관리자인지는 owners 표를 직접 못 읽으니 is_owner() 함수로 확인
+const NO_TRACK = 'hanlog:no-track';
+
+async function markOwnerDevice() {
+  try {
+    if (localStorage.getItem(NO_TRACK)) return;
+  } catch {
+    return; // 저장소를 못 쓰면 표시도 못 남김
+  }
+  const { data, error } = await supabase.rpc('is_owner');
+  if (error || data !== true) return;
+  try {
+    localStorage.setItem(NO_TRACK, '1');
+  } catch {
+    // 못 남기면 다음 로그인 때 다시
+  }
+}
+
 if (supabase) {
   supabase.auth.onAuthStateChange((_event, next) => {
     session = next;
     ready = true;
+    // 이 알림 안에서 Supabase를 다시 부르면 멈출 수 있어서 다음 차례에
+    if (next) setTimeout(markOwnerDevice, 0);
     if (!next) store(SET_PASSWORD, null); // 로그아웃하면 더 안 물어봄
     else if (!stored(SET_PASSWORD) && linkLogin(next)) store(SET_PASSWORD, linkLogin(next));
     if (next && stored(SET_PASSWORD) && !/^#\/set-password\/?$/.test(window.location.hash)) {
