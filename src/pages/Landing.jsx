@@ -8,7 +8,7 @@ import ProjectStrip from '../components/ProjectStrip.jsx';
 import { useBooks } from '../data/books.js';
 import { useCoverSizes } from '../data/coverSizes.js';
 import { addCategory, loadCategories, removeCategory, useCategories } from '../data/categories.js';
-import { useCanEdit, useSession } from '../data/supabase.js';
+import { useCanEdit, useSession, userName } from '../data/supabase.js';
 import { categories as baseCategories, loadRows } from '../data/projects.js';
 import braceLeft from '../assets/brace-left.svg';
 import braceRight from '../assets/brace-right.svg';
@@ -93,11 +93,6 @@ function withBooks(rows, books, names, sizes) {
 }
 
 // 로그인한 사람의 이름: 계정 정보의 name(또는 full_name), 없으면 이메일 @ 앞부분
-const userName = (user) => {
-  const meta = user?.user_metadata ?? {};
-  return (meta.name || meta.full_name || user?.email?.split('@')[0] || '').trim();
-};
-
 const startIndex = (row) => Math.floor((row.items.length - 1) / 2) * (row.kind === 'posts' ? 0 : 1);
 
 export default function Landing() {

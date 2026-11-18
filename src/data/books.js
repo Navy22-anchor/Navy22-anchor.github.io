@@ -36,7 +36,8 @@ const set = (next) => {
 async function refresh() {
   const { data, error } = await supabase
     .from('books')
-    .select('id, isbn, title, authors, publisher, year, cover, category, spine')
+    // * : 목차(toc) 칸을 아직 안 만든 데이터베이스에서도 목록은 받도록
+    .select('*')
     .order('created_at');
   if (!error) set(data);
 }
@@ -112,6 +113,14 @@ export async function setSpine(book, file) {
   // 예전 사진은 지움 (실패해도 그만)
   const old = book.spine?.split('/book-spines/')[1];
   if (old) storage.remove([old]).catch(() => {});
+  await refresh();
+}
+
+// 목차 저장 (주인만). toc: 붙여 넣은 목차 글 (src/data/toc.js 가 읽음)
+export async function setToc(book, toc) {
+  if (!supabase) return set(books.map((b) => (b.id === book.id ? { ...b, toc } : b)));
+  const { error } = await supabase.from('books').update({ toc }).eq('id', book.id);
+  if (error) throw error;
   await refresh();
 }
 

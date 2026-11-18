@@ -4,7 +4,7 @@ import { removeBook, setSpine, useBooks } from '../data/books.js';
 import { useCanEdit } from '../data/supabase.js';
 import backIcon from '../assets/back.svg';
 import styles from './Shelf.module.css';
-import { goBack } from '../router.js';
+import { goBack, navigate } from '../router.js';
 
 // Figma "Library shelf (1440)" (249:2860): 랜딩에서 책 표지를 누르면 그 카테고리의 책을 책등으로 꽂아 보여 주는 책장
 // 누른 책(bookId)이 골라진(솟아오른) 채로 열림
@@ -73,9 +73,9 @@ export default function Shelf({ name, bookId }) {
   };
 
   const onSpineClick = (book) => {
-    // 주인이 이미 고른 회색 칸을 누르면 바로 사진 고르기
+    // 주인이 이미 고른 회색 칸을 누르면 바로 사진 고르기, 그 밖에는 그 책의 구절 페이지로
     if (editable && !book.spine && selected?.id === book.id) pickSpine(book);
-    else setSelectedId(book.id);
+    else navigate(`/book/${encodeURIComponent(book.id)}`);
   };
 
   return (
@@ -117,9 +117,10 @@ export default function Shelf({ name, bookId }) {
 
           {selected && (
             <div className={styles.caption}>
-              <p className={styles.info}>
+              {/* 누르면 이 책에서 옮겨 적은 구절 (/book/<id>) */}
+              <a href={`/book/${encodeURIComponent(selected.id)}`} className={styles.info}>
                 {[selected.title, selected.authors, selected.publisher].filter(Boolean).join(', ')}
-              </p>
+              </a>
               {editable && (
                 <span className={styles.tools}>
                   <button type="button" className={styles.upload} onClick={() => pickSpine(selected)} disabled={uploading}>

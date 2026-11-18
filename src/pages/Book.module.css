@@ -1,0 +1,476 @@
+/* 책 페이지 (Figma "Library book page" 314:3052 읽기, 317:3052 쓰기, 327:3052 목차, 1920 × 1080 기준)
+   상단 바는 책장과 같음. 왼쪽 x 32에 목차(폭 300), x 400부터 두 쪽(각 692, 사이 104)
+   구절: 22px 170%, 왼쪽 3px 초록 막대 / 코멘트 상자: 연회색, 둥근 12, 안쪽 16·20 / 구절 사이 56 */
+.page {
+  --gap: 104px;
+  --top: 107px;
+  --bottom: 104px; /* 아래 "코멘트 모두 펼치기" 자리 */
+
+  min-height: 100vh;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
+
+/* ── 상단 바 ── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 32px;
+}
+
+.headerSide {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  gap: 16px;
+}
+
+.headerSide:last-child {
+  justify-content: flex-end;
+}
+
+.iconButton {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.iconButton img {
+  display: block;
+  filter: var(--color-icon-filter);
+}
+
+.iconButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(640px, 60vw);
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--color-fill);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.pill > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 쓰기 화면: 알약을 누르면 다른 책 고르기 (투명한 select를 알약 위에 겹침) */
+.picker {
+  position: relative;
+  cursor: pointer;
+}
+
+.picker select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.picker[data-keyboard]:focus-within {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+/* 임시저장 · 발행 */
+.action {
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--color-fill);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.primary {
+  background: var(--color-accent);
+  color: var(--color-white);
+}
+
+.status {
+  color: var(--color-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* ── 목차 (왼쪽 고정) ── */
+.aside {
+  position: fixed;
+  pointer-events: none; /* 목차가 접혀 본문이 왼쪽으로 오면, 빈 목차 영역이 본문 클릭을 가로채지 않게 */
+  top: var(--top);
+  bottom: 32px;
+  left: 32px;
+  width: 300px;
+}
+
+.tocEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+}
+
+.tocEditor textarea {
+  flex: 1;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: var(--color-fill);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  resize: none;
+}
+
+.tocEditor textarea:focus {
+  outline: 2px solid var(--color-text);
+  outline-offset: -2px;
+}
+
+.tocHint {
+  margin: 0;
+  color: var(--color-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.link {
+  align-self: flex-start;
+  color: var(--color-secondary);
+  font-size: 13px;
+  text-decoration: underline;
+}
+
+/* ── 펼친 면: 두 쪽, 넘치면 오른쪽에 계속 (src/components/Spread.jsx) ── */
+.page[data-toc='open'] .aside,
+.aside button,
+.aside a {
+  pointer-events: auto;
+}
+
+/* 목차에서 눌러 온 구절: 잠깐 연한 초록 바탕 */
+.entry[data-flash] .quote {
+  animation: flash 1.6s ease;
+}
+
+@keyframes flash {
+  0%,
+  40% {
+    background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+/* 목차가 "-"로 접혀 있으면 본문이 왼쪽 빈자리로 (x 112), 펴면 목차 옆으로 (x 400). "-"가 미끄러지는 0.4초에 맞춰 같이 움직임 */
+.main {
+  margin: calc(var(--top) - 77px) 32px 0 400px;
+  transition: margin-left 0.4s ease;
+}
+
+.page[data-toc='closed'] .main {
+  margin-left: 112px;
+}
+
+.spread {
+  height: calc(100vh - var(--top) - var(--bottom));
+  overflow: hidden;
+}
+
+.columns {
+  height: 100%;
+  column-count: 2;
+  column-gap: var(--gap);
+  column-fill: auto;
+  transition: transform 0.35s ease;
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 56px;
+  break-inside: avoid;
+}
+
+/* 구절 위: 목차 자리 ("장 › 절"). 쓰기 화면에서는 눌러서 고름 */
+.sectionLabel,
+.sectionPicker {
+  margin: 0 0 -8px;
+  color: var(--color-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.sectionPicker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  max-width: 100%;
+  cursor: pointer;
+}
+
+.sectionPicker > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sectionPicker[data-empty] {
+  color: var(--color-muted);
+}
+
+.sectionPicker select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.sectionPicker[data-keyboard]:focus-within {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.quote {
+  margin: 0;
+  padding: 0 0 0 20px;
+  border: none;
+  border-left: 3px solid var(--color-accent);
+  color: var(--color-text);
+  font-size: 22px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment {
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: var(--color-fill);
+}
+
+.commentHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 24px;
+  color: var(--color-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.author {
+  color: color-mix(in srgb, var(--color-text) 73%, var(--color-bg));
+}
+
+.spacer {
+  flex: 1;
+}
+
+.pageNumber {
+  font-weight: 400;
+}
+
+/* 쓰기 화면의 쪽수 칸: 흰 칩 */
+.pageChip {
+  width: 64px;
+  padding: 2px 8px;
+  border: none;
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 400;
+  text-align: center;
+}
+
+.pageChip::placeholder {
+  color: var(--color-muted);
+}
+
+.collapse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--color-secondary);
+}
+
+.commentText {
+  margin: 8px 0 0;
+  color: var(--color-text);
+  font-size: 17px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* 쓰기 화면: 글자칸이 읽기 화면 글자와 똑같이 보이도록 */
+.input {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  border-radius: 0;
+  background: transparent;
+  font-family: inherit;
+  resize: none;
+}
+
+textarea.commentText {
+  padding: 0;
+  border: none;
+}
+
+.input:focus {
+  outline: none;
+}
+
+.input::placeholder,
+.pageChip::placeholder {
+  color: var(--color-muted);
+}
+
+.empty {
+  margin: 0;
+  padding: 120px 16px;
+  color: var(--color-secondary);
+  font-size: 15px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+/* ── 아래 가운데: 코멘트 모두 펼치기/접기 (+ 쓰기 화면은 면 넘기기 · 구절 추가) ── */
+.bottomBar {
+  position: fixed;
+  right: 0;
+  bottom: 32px;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.barPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--color-fill);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+button.barPill:disabled,
+.barPill button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.navButton {
+  display: flex;
+  align-items: center;
+}
+
+.divider {
+  width: 1px;
+  height: 14px;
+  background: var(--color-muted);
+}
+
+
+button.barPill:focus-visible,
+.collapse:focus-visible,
+.commentHead:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+/* ── 좁은 화면: 목차는 위, 한 쪽짜리 세로 목록 ── */
+@media (max-width: 1099px) {
+  .header {
+    padding: 16px;
+  }
+
+  .aside {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 8px 16px 24px;
+  }
+
+  .tocEditor textarea {
+    min-height: 200px;
+  }
+
+  .main,
+  .page[data-toc='closed'] .main {
+    margin: 0 16px;
+    padding-bottom: 96px;
+  }
+
+  .spread {
+    height: auto;
+    overflow: visible;
+  }
+
+  .columns {
+    height: auto;
+    column-count: 1;
+  }
+
+  .quote {
+    font-size: 19px;
+  }
+
+  .commentText {
+    font-size: 16px;
+  }
+}

@@ -112,6 +112,45 @@ begin
   end if;
 end $$;
 
+-- 책 목차 (주인이 구절 쓰기 화면에서 붙여 넣음. 줄마다 "1장 …", "1.1 …", "부록 A …" 등)
+alter table public.books add column if not exists toc text not null default '';
+
+-- 책 구절: 책에서 기억하고 싶은 구절 + 왜 인상적이었나 (책 페이지 /book/<책 id>)
+create table if not exists public.book_quotes (
+  id uuid primary key default gen_random_uuid(),
+  book_id uuid not null references public.books (id) on delete cascade,
+  position int not null default 0, -- 보이는 순서
+  quote text not null default '',
+  page text not null default '', -- 쪽수
+  comment text not null default '',
+  author_name text not null default '', -- 쓴 사람 별명 (쓸 때의 이름을 그대로 남김)
+  author_id uuid default auth.uid(),
+  created_at timestamptz not null default now()
+);
+-- 구절이 속한 목차 자리 ("장 › 절 › 항", 쓰기 화면에서 고름)
+alter table public.book_quotes add column if not exists section text not null default '';
+create index if not exists book_quotes_book on public.book_quotes (book_id, position);
+
+alter table public.book_quotes enable row level security;
+grant select on public.book_quotes to anon, authenticated;
+grant insert, update, delete on public.book_quotes to authenticated;
+
+drop policy if exists "누구나 읽기" on public.book_quotes;
+drop policy if exists "주인만 추가" on public.book_quotes;
+drop policy if exists "주인만 수정" on public.book_quotes;
+drop policy if exists "주인만 삭제" on public.book_quotes;
+create policy "누구나 읽기" on public.book_quotes for select to anon, authenticated using (true);
+create policy "주인만 추가" on public.book_quotes for insert to authenticated with check ((select public.is_owner()));
+create policy "주인만 수정" on public.book_quotes for update to authenticated using ((select public.is_owner())) with check ((select public.is_owner()));
+create policy "주인만 삭제" on public.book_quotes for delete to authenticated using ((select public.is_owner()));
+
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'book_quotes') then
+    alter publication supabase_realtime add table public.book_quotes;
+  end if;
+end $$;
+
 -- ↓ 계정을 만든 뒤(Authentication → Users → Add user) 이메일을 바꿔서 이 줄만 따로 한 번 실행
 -- insert into public.owners (user_id) select id from auth.users where email = '내 이메일' on conflict do nothing;
 

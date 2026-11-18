@@ -124,6 +124,12 @@ export const useSession = () => useSyncExternalStore(subscribe, () => session);
 export const useAuthReady = () => useSyncExternalStore(subscribe, () => ready);
 
 // 바꿀 수 있는지: Supabase를 안 쓰면 이 브라우저 것이니 항상, 쓰면 로그인했을 때만
+// 화면에 보일 이름: 비밀번호 정하기에서 고른 별명, 없으면 이메일 @ 앞부분
+export const userName = (user) => {
+  const meta = user?.user_metadata ?? {};
+  return (meta.name || meta.full_name || user?.email?.split('@')[0] || '').trim();
+};
+
 export const canEdit = () => !supabase || !!session;
 export const useCanEdit = () => useSyncExternalStore(subscribe, canEdit);
 
