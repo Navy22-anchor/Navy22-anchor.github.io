@@ -62,7 +62,15 @@ const sameBook = (a, b) => (a.isbn && a.isbn === b.isbn) || (a.title === b.title
 export const hasBook = (book) => books.some((b) => sameBook(b, book));
 
 // 추가 (이미 있으면 그대로). category: 표지가 붙을 랜딩 줄 (기본 Library). 실패하면 화면을 되돌리고 오류를 던짐
-export async function addBook({ isbn = '', title, authors = '', publisher = '', year = '', cover = '', category = 'Library' }) {
+export async function addBook({
+  isbn = '',
+  title,
+  authors = '',
+  publisher = '',
+  year = '',
+  cover = '',
+  category = 'Library',
+}) {
   const book = { isbn, title, authors, publisher, year, cover, category };
   if (hasBook(book)) return;
   if (!supabase) return set([...books, { id: crypto.randomUUID(), ...book }]);
@@ -124,13 +132,33 @@ export async function setToc(book, toc) {
   await refresh();
 }
 
+// 국립중앙도서관에서 목차 받아 오기 (Edge Function book-toc 경유, 키는 서버에만). { toc, title, isbn }
+// 목차를 낸 책이 아니면 toc: ''
+export async function fetchToc(book) {
+  if (!supabase) throw new Error('Supabase가 연결되어 있어야 목차를 가져올 수 있어요');
+  const params = new URLSearchParams({ isbn: book.isbn ?? '', title: book.title ?? '' });
+  const { data, error } = await supabase.functions.invoke(`book-toc?${params}`, { method: 'GET' });
+  if (error) {
+    const message = await error.context
+      ?.json?.()
+      .then((body) => body.error)
+      .catch(() => null);
+    throw new Error(message || '목차를 가져오지 못했어요');
+  }
+  return data;
+}
+
 // 책 삭제 (주인만): books 표에서 지우고, 올린 책등 사진도 Storage에서 지움
 export async function removeBook(book) {
   if (!supabase) return set(books.filter((b) => b.id !== book.id));
   const { error } = await supabase.from('books').delete().eq('id', book.id);
   if (error) throw error;
   const spine = book.spine?.split('/book-spines/')[1];
-  if (spine) supabase.storage.from('book-spines').remove([spine]).catch(() => {});
+  if (spine)
+    supabase.storage
+      .from('book-spines')
+      .remove([spine])
+      .catch(() => {});
   await refresh();
 }
 
@@ -147,7 +175,10 @@ export async function searchBooks(query) {
   });
   if (error) {
     // 함수가 보낸 오류 문구가 있으면 그걸 보여 줌
-    const message = await error.context?.json?.().then((body) => body.error).catch(() => null);
+    const message = await error.context
+      ?.json?.()
+      .then((body) => body.error)
+      .catch(() => null);
     throw new Error(message || '검색하지 못했어요');
   }
   return data.books ?? [];

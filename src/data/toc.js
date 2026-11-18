@@ -4,8 +4,12 @@
 //   "1.1 LLM이란 무엇인가요?"    → 절
 //   "1.1.1 …", "__A.1.1 …", 들여쓴 줄 → 항
 //   "부록 A 파이토치 소개"        → "부록" 묶음 이름 + 장
-//   "[워크북 목차]"              → "워크북" 묶음 이름
+//   "[워크북 목차]", "PART 1 기초" → 묶음 이름
+//   "Chapter 5: …", "chapter 01. …", "제3장 …" → 장
+//   "1. …" → "N장" 꼴의 장이 없는 목차에서만 장 (있으면 절)
+//   "1) …" → 절 (들여 썼으면 항),  앞의 "- " 는 뺌
 // 그 밖의 줄은 장 안이면 절, 아니면 장
+// (국립중앙도서관에서 가져온 목차도 이 꼴들이 섞여 옴: supabase/functions/book-toc)
 //
 // 결과: [{ type: 'group', title } | { type: 'chapter', title, value, sections: [{ title, level, value }] }]
 // value: 목차 자리 경로 "장 › 절 › 항"
@@ -60,16 +64,28 @@ export function parseToc(text = '') {
     chapter.sections.push({ title, level, value });
   };
 
+  // "1장" 꼴의 장이 있으면 "1. …"은 절, 없으면 장
+  const hasJang = /^\s*(?:제\s*)?\d+\s*장/m.test(text);
+
   for (const raw of text.split('\n')) {
     const line = raw.trim();
     if (!line) continue;
     const indented = /^(\s{2,}|\t)/.test(raw) || line.startsWith('__');
-    const body = line.replace(/^_+/, '');
+    const body = line.replace(/^_+/, '').replace(/^[-–·•]\s+/, '');
+    if (!body) continue;
     let m;
     if ((m = /^\[(.+)\]$/.exec(body))) {
       addGroup(m[1].replace(/\s*목차$/, '').trim());
-    } else if ((m = /^\d+\s*장\.?\s+(.+)$/.exec(body))) {
+    } else if ((m = /^part\s*\d+[.:]?\s+(.+)$/i.exec(body))) {
+      addGroup(m[1]);
+    } else if ((m = /^(?:제\s*)?\d+\s*장\.?:?\s+(.+)$/.exec(body))) {
       addChapter(m[1]);
+    } else if ((m = /^(?:chapter|ch\.?)\s*\d+\s*[.:]?\s+(.+)$/i.exec(body))) {
+      addChapter(m[1]);
+    } else if (!hasJang && !indented && (m = /^\d+\s*[.:]\s+(.+)$/.exec(body))) {
+      addChapter(m[1]);
+    } else if (chapter && (m = /^\d+\s*[).:]\s+(.+)$/.exec(body))) {
+      addSection(m[1], indented && hasJang ? 2 : 1);
     } else if ((m = /^부록\s*[A-Z]\.?\s+(.+)$/.exec(body))) {
       if (group !== '부록') addGroup('부록');
       addChapter(m[1]);

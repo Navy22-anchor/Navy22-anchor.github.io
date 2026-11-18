@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import Toc from '../components/Toc.jsx';
 import { Chevron, SpreadNav, useSpread } from '../components/Spread.jsx';
-import { setToc, useBooks } from '../data/books.js';
+import { fetchToc, setToc, useBooks } from '../data/books.js';
 import { saveQuotes, useQuotes } from '../data/quotes.js';
 import { inSection, parseToc, sectionsWithQuotes, tocOptions } from '../data/toc.js';
 import { useCanEdit, useSession, userName } from '../data/supabase.js';
@@ -75,6 +75,8 @@ export default function BookWrite({ bookId }) {
   const focusKey = useRef(null);
   const [activeKey, setActiveKey] = useState(null); // 마지막으로 커서가 있던 구절 (구절 삭제 대상)
   const [deleting, setDeleting] = useState(null); // "삭제 하겠습니까?" 창에 띄운 구절
+  const [fetchingToc, setFetchingToc] = useState(false);
+  const [fetchedToc, setFetchedToc] = useState(null); // 받아 왔는데 지금 목차를 덮어쓸지 묻는 중
   const spread = useSpread(GAP);
 
   // 처음 채우기: 임시저장본이 있으면 그것, 없으면 저장된 구절, 그것도 없으면 빈 구절 하나
@@ -131,6 +133,30 @@ export default function BookWrite({ bookId }) {
     if (!el) return;
     spread.reveal(el);
     el.querySelector('textarea')?.focus({ preventScroll: true });
+  };
+
+  // 국립중앙도서관에서 목차 가져오기 (ISBN으로, 없으면 제목으로). 이미 적힌 목차가 있으면 바꿀지 물음
+  const applyToc = (text) => {
+    setTocText(text);
+    setFetchedToc(null);
+    setStatus('목차를 가져왔어요. 발행하면 저장돼요');
+  };
+  const loadToc = async () => {
+    if (!book || fetchingToc) return;
+    setFetchingToc(true);
+    setStatus('목차를 가져오는 중…');
+    try {
+      const { toc: text } = await fetchToc(book);
+      if (!text) setStatus('국립중앙도서관에 이 책의 목차가 없어요. 직접 붙여 넣어 주세요');
+      else if (toc.trim()) {
+        setStatus('');
+        setFetchedToc(text);
+      } else applyToc(text);
+    } catch (err) {
+      setStatus(err.message);
+    } finally {
+      setFetchingToc(false);
+    }
   };
 
   const add = () => {
@@ -258,6 +284,9 @@ export default function BookWrite({ bookId }) {
               }}
             />
             <p className={styles.tocHint}>번호(1장, 1.1 …)는 화면에서 빠지고 글자 크기로 단계를 나눠요.</p>
+            <button type="button" className={styles.link} onClick={loadToc} disabled={fetchingToc || !book}>
+              {fetchingToc ? '가져오는 중…' : '국립중앙도서관에서 목차 가져오기'}
+            </button>
             {tocItems.length > 0 && (
               <button type="button" className={styles.link} onClick={() => setEditingToc(false)}>
                 목차 보기
@@ -367,6 +396,14 @@ export default function BookWrite({ bookId }) {
           </button>
         </div>
       </div>
+
+      {fetchedToc !== null && (
+        <ConfirmDialog
+          title="지금 목차를 가져온 목차로 바꿀까요?"
+          onConfirm={() => applyToc(fetchedToc)}
+          onClose={() => setFetchedToc(null)}
+        />
+      )}
 
       {deleting && (
         <ConfirmDialog
