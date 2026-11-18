@@ -6,3 +6,7 @@ dist/
 
 # Supabase CLI 로컬 정보 (연결한 프로젝트 등)
 supabase/.temp/
+
+# Claude Code 로컬 설정 (개발 서버 실행 설정, 작업용 worktree)
+.claude/launch.json
+.claude/worktrees/
