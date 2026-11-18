@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { useSyncExternalStore } from 'react';
+import { navigate } from '../router.js';
 
 // 노래 예약·카테고리를 모든 컴퓨터가 같이 보도록 Supabase에 저장합니다.
 // 주소·키가 없으면(예: 배포 변수를 아직 안 넣음) 예전처럼 이 브라우저에만 저장합니다.
@@ -9,7 +10,7 @@ const key = import.meta.env.SUPABASE_KEY;
 
 // 초대·비밀번호 재설정 메일의 링크로 들어오면 주소 끝(#access_token=…&type=invite)에 로그인 정보가 붙어 옴
 // Supabase가 그걸 읽고 지우기 전에(createClient 전에) 어떤 링크였는지만 기억해 두고,
-// 로그인이 되면 비밀번호 정하는 화면(#/set-password)으로 보냄. 새로고침해도 이어지게 이 탭에 저장
+// 로그인이 되면 비밀번호 정하는 화면(/set-password)으로 보냄. 새로고침해도 이어지게 이 탭에 저장
 const SET_PASSWORD = 'hanlog:set-password';
 const LINK_ERROR = 'hanlog:link-error';
 
@@ -39,7 +40,7 @@ if (url && key) {
   } else if (params.has('error_description')) {
     // 만료됐거나 이미 쓴 링크: 로그인 정보가 없으니 주소를 바로 정리하고 안내 화면으로
     store(LINK_ERROR, params.get('error_code') || params.get('error') || 'error');
-    window.location.replace('#/set-password');
+    window.history.replaceState(null, '', '/set-password'); // 앱이 뜨기 전이라 주소만 바꾸면 됨
   }
 }
 
@@ -104,9 +105,9 @@ if (supabase) {
     if (next) setTimeout(markOwnerDevice, 0);
     if (!next) store(SET_PASSWORD, null); // 로그아웃하면 더 안 물어봄
     else if (!stored(SET_PASSWORD) && linkLogin(next)) store(SET_PASSWORD, linkLogin(next));
-    if (next && stored(SET_PASSWORD) && !/^#\/set-password\/?$/.test(window.location.hash)) {
+    if (next && stored(SET_PASSWORD) && !/^\/set-password\/?$/.test(window.location.pathname)) {
       // 링크로 막 로그인됨 → 비밀번호부터 정하게 (이벤트 처리 중에 주소를 바꾸지 않도록 다음 차례에)
-      setTimeout(() => window.location.replace('#/set-password'), 0);
+      setTimeout(() => navigate('/set-password', { replace: true }), 0);
     }
     emit();
   });

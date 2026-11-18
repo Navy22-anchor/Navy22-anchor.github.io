@@ -4,18 +4,14 @@ import { signIn, supabase, useAuthReady, useSession } from '../data/supabase.js'
 import { uploadLocalSchedules } from '../components/schedules.js';
 import backIcon from '../assets/back.svg';
 import styles from './Login.module.css';
+import { goBack, navigate } from '../router.js';
 
-// #/login: 주인 로그인 (Figma "Login page (1440)"). 로그인하면 노래 예약·카테고리를 추가하고 지울 수 있음
+// /login: 주인 로그인 (Figma "Login page (1440)"). 로그인하면 노래 예약·카테고리를 추가하고 지울 수 있음
 // 이메일·비밀번호를 넣고 Enter. 성공하면 바로 홈으로. 이미 로그인했으면 들어오자마자 홈으로
 // 계정은 Supabase 대시보드(Authentication → Users)에서 만들고 owners 표에 등록 (supabase/schema.sql)
 
-// 이전 화면이 있으면 그리로, 이 주소로 바로 열었으면 홈으로
-function goBack() {
-  if (window.history.length > 1) window.history.back();
-  else window.location.hash = '#/';
-}
 
-const goHome = () => window.location.replace('#/');
+const goHome = () => navigate('/', { replace: true });
 
 export default function Login() {
   const session = useSession();

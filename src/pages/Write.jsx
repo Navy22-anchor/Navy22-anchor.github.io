@@ -12,6 +12,7 @@ import { TOKEN_HELP_URL, clearToken, commitPost, loadToken, saveToken } from '..
 import { addImage, imageRepoPath, imagesIn, loadImageBlob } from '../data/localImages.js';
 import backIcon from '../assets/back.svg';
 import styles from './Write.module.css';
+import { goBack, navigate } from '../router.js';
 
 // Figma "Blog Post Editor" (21:38): 왼쪽 마크다운 원본, 오른쪽 읽기 미리보기
 
@@ -436,10 +437,10 @@ export default function Write({ editId }) {
     clearDraft(original?.id);
     // 수정이면 편집 화면을 기록에서 지워, 글에서 뒤로가기 하면 수정 전 화면으로 돌아오지 않게
     // 새 글이면 글쓰기 화면 기록을 홈으로 바꿔 두어, 발행한 글에서 뒤로가기 하면 홈으로 가게
-    if (original) window.location.replace(`#/post/${post.id}`);
+    if (original) navigate(`/post/${post.id}`, { replace: true });
     else {
-      window.history.replaceState(null, '', '#/');
-      window.location.hash = `#/post/${post.id}`;
+      navigate('/', { replace: true });
+      navigate(`/post/${post.id}`);
     }
   };
 
@@ -493,11 +494,6 @@ export default function Write({ editId }) {
     runTool(tool);
   };
 
-  // 이전 화면이 있으면 그리로, 이 주소로 바로 열었으면 홈으로
-  const goBack = () => {
-    if (window.history.length > 1) window.history.back();
-    else window.location.hash = '#/';
-  };
 
   const references = draft.references.filter((ref) => referenceText(ref).trim());
   const isEmpty = !original && JSON.stringify(draft) === JSON.stringify(emptyDraft);

@@ -13,6 +13,7 @@ import { categories as baseCategories, loadRows } from '../data/projects.js';
 import braceLeft from '../assets/brace-left.svg';
 import braceRight from '../assets/brace-right.svg';
 import styles from './Landing.module.css';
+import { navigate } from '../router.js';
 
 // Shift + 휠(또는 트랙패드 가로 스와이프)을 이만큼 굴리면 하나씩 넘어감
 const WHEEL_STEP = 60;
@@ -198,8 +199,8 @@ export default function Landing() {
   }, []);
 
   const openItem = useCallback((it, row) => {
-    if (row.kind === 'posts') window.location.hash = `#/post/${it.id}`;
-    else if (it.shelf) window.location.hash = `#/shelf/${it.shelf}`;
+    if (row.kind === 'posts') navigate(`/post/${it.id}`);
+    else if (it.shelf) navigate(`/shelf/${it.shelf}`);
   }, []);
 
   // 가로 이동: Shift + 휠, 트랙패드 가로 스와이프, ←/→ 키
@@ -256,7 +257,7 @@ export default function Landing() {
         ) : (
           // 방문자 (Figma "Landing first screen (1920)" 310:4661): "Login at Hanlog", Login을 누르면 로그인 화면
           <h1 className={`${styles.logo} ${styles.visitorLogo}`}>
-            <a href="#/login" className={`${styles.plainLink} ${styles.logoName}`}>
+            <a href="/login" className={`${styles.plainLink} ${styles.logoName}`}>
               Login
             </a>
             <span className={styles.logoName}> </span>
@@ -279,7 +280,7 @@ export default function Landing() {
             </button>
             {/* 지금 고른 카테고리를 글쓰기 화면의 기본 카테고리로 (빈 칸의 카테고리에서 누르면 그 카테고리로 발행) */}
             <a
-              href="#/write"
+              href="/write"
               className={styles.plainLink}
               onClick={() => {
                 try {

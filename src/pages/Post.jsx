@@ -9,6 +9,7 @@ import backIcon from '../assets/back.svg';
 import penIcon from '../assets/pen.svg';
 import trashIcon from '../assets/trash.svg';
 import styles from './Post.module.css';
+import { goBack, navigate } from '../router.js';
 
 function Block({ block }) {
   switch (block.type) {
@@ -30,11 +31,6 @@ function Block({ block }) {
   }
 }
 
-// 이전 화면이 있으면 그리로, 이 주소로 바로 열었으면 홈으로
-function goBack() {
-  if (window.history.length > 1) window.history.back();
-  else window.location.hash = '#/';
-}
 
 export default function Post({ id }) {
   const post = findPost(id);
@@ -63,7 +59,7 @@ export default function Post({ id }) {
       }
     }
     removePost(post.id);
-    window.location.replace('#/');
+    navigate('/', { replace: true });
   };
 
   return (
@@ -75,9 +71,9 @@ export default function Post({ id }) {
             <img src={backIcon} alt="" width="24" height="24" />
           </button>
         </div>
-        <a href="#/" className={styles.pill}>{post.category || '나의 블로그'}</a>
+        <a href="/" className={styles.pill}>{post.category || '나의 블로그'}</a>
         <div className={`${styles.headerSide} ${styles.headerRight}`}>
-          <a href={`#/write/${post.id}`} className={styles.iconButton} aria-label="글 수정">
+          <a href={`/write/${post.id}`} className={styles.iconButton} aria-label="글 수정">
             <img src={penIcon} alt="" width="24" height="24" />
           </a>
           <button

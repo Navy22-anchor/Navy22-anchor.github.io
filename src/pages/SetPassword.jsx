@@ -9,18 +9,15 @@ import {
 } from '../data/supabase.js';
 import backIcon from '../assets/back.svg';
 import styles from './Login.module.css';
+import { goBack, navigate } from '../router.js';
 
-// #/set-password: 초대 메일(또는 비밀번호 재설정 메일)의 링크로 들어오면 여기로 옴 (supabase.js가 보냄)
-// 링크로 이미 로그인된 상태라, 새 비밀번호를 두 번 넣고 Enter → 다음부터 #/login 에서 이메일·비밀번호로 로그인
+// /set-password: 초대 메일(또는 비밀번호 재설정 메일)의 링크로 들어오면 여기로 옴 (supabase.js가 보냄)
+// 링크로 이미 로그인된 상태라, 새 비밀번호를 두 번 넣고 Enter → 다음부터 /login 에서 이메일·비밀번호로 로그인
 // 생김새는 로그인 화면과 같음
 const MIN_LENGTH = 6; // Supabase 기본 최소 길이
 
-const goHome = () => window.location.replace('#/');
+const goHome = () => navigate('/', { replace: true });
 
-function goBack() {
-  if (window.history.length > 1) window.history.back();
-  else window.location.hash = '#/';
-}
 
 function message(err) {
   if (err.code === 'same_password') return '전과 다른 비밀번호를 넣어 주세요.';
@@ -73,7 +70,7 @@ export default function SetPassword() {
           : linkError
             ? '링크로 로그인하지 못했어요. 메일을 다시 받아 주세요.'
             : '초대 메일의 링크로 들어와야 비밀번호를 정할 수 있어요.'}{' '}
-        <a href="#/login">로그인</a>
+        <a href="/login">로그인</a>
       </p>
     );
   } else {

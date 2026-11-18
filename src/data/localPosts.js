@@ -53,7 +53,7 @@ export function removePost(id) {
   write(DELETED_KEY, [...new Set([...loadDeletedIds(), id])]);
 }
 
-// 파일 이름(=글 주소). 예: 2026-11-08-1611 → content/posts/2026-11-08-1611.md, #/post/2026-11-08-1611
+// 파일 이름(=글 주소). 예: 2026-11-08-1611 → content/posts/2026-11-08-1611.md, /post/2026-11-08-1611
 export function postId(d = new Date()) {
   const pad = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;

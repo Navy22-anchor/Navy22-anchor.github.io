@@ -4,16 +4,13 @@ import { removeBook, setSpine, useBooks } from '../data/books.js';
 import { useCanEdit } from '../data/supabase.js';
 import backIcon from '../assets/back.svg';
 import styles from './Shelf.module.css';
+import { goBack } from '../router.js';
 
 // Figma "Library shelf (1440)" (249:2860): 랜딩에서 책 표지를 누르면 그 카테고리의 책을 책등으로 꽂아 보여 주는 책장
 // 누른 책(bookId)이 골라진(솟아오른) 채로 열림
 // 책등 사진은 주인이 직접 올림 (아직 없으면 회색 칸). 고른 책은 조금 솟아오르고, 아래에 제목·저자·출판사
 const same = (a, b) => a.toLowerCase() === b.toLowerCase();
 
-function goBack() {
-  if (window.history.length > 1) window.history.back();
-  else window.location.hash = '#/';
-}
 
 export default function Shelf({ name, bookId }) {
   const books = useBooks().filter((book) => same(book.category || 'Library', name));
@@ -89,7 +86,7 @@ export default function Shelf({ name, bookId }) {
             <img src={backIcon} alt="" width="24" height="24" />
           </button>
         </div>
-        <a href="#/" className={styles.pill}>
+        <a href="/" className={styles.pill}>
           {name}
         </a>
         <div className={styles.headerSide} />
