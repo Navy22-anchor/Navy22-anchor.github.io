@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import CategoryMenu from '../components/CategoryMenu.jsx';
+import PostToc from '../components/PostToc.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import Markdown from '../components/Markdown.jsx';
 import ReferenceList from '../components/ReferenceList.jsx';
@@ -31,13 +33,13 @@ function Block({ block }) {
   }
 }
 
-
 export default function Post({ id }) {
   const post = findPost(id);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const isExample = posts.includes(post); // 예시 글은 지울 파일이 없음
+  const articleRef = useRef(null);
 
   // 휴지통: 저장소 글은 GitHub에서 파일을 지우는 커밋, 이 브라우저에만 있는 글은 여기서만 지움
   const onDelete = async () => {
@@ -71,7 +73,14 @@ export default function Post({ id }) {
             <img src={backIcon} alt="" width="24" height="24" />
           </button>
         </div>
-        <a href="/" className={styles.pill}>{post.category || '나의 블로그'}</a>
+        {/* 카테고리 알약: 누르면 같은 카테고리의 글 목록 (예시 글은 카테고리가 없어 홈 링크) */}
+        {post.category ? (
+          <CategoryMenu category={post.category} currentId={post.id} className={styles.pill} />
+        ) : (
+          <a href="/" className={styles.pill}>
+            나의 블로그
+          </a>
+        )}
         <div className={`${styles.headerSide} ${styles.headerRight}`}>
           <a href={`/write/${post.id}`} className={styles.iconButton} aria-label="글 수정">
             <img src={penIcon} alt="" width="24" height="24" />
@@ -101,7 +110,12 @@ export default function Post({ id }) {
       )}
 
       <main className={styles.content}>
-        <article className={styles.article}>
+        {/* 왼쪽 목차: 본문 마크다운의 제목으로 */}
+        <aside className={styles.tocColumn}>
+          <PostToc articleRef={articleRef} deps={[post.id, post.markdown]} />
+        </aside>
+
+        <article ref={articleRef} className={styles.article}>
           <h1 className={styles.title}>{post.title}</h1>
           <div className={styles.meta}>
             {post.author && <p className={styles.byline}>by {post.author}</p>}
@@ -116,7 +130,9 @@ export default function Post({ id }) {
 
         {post.faq?.length > 0 && (
           <section className={styles.faq} aria-labelledby="faq-heading">
-            <h2 id="faq-heading" className={styles.sectionHeading}>자주 묻는 질문</h2>
+            <h2 id="faq-heading" className={styles.sectionHeading}>
+              자주 묻는 질문
+            </h2>
             {post.faq.map((item) => (
               <div key={item.q} className={styles.faqItem}>
                 <h3 className={styles.question}>{item.q}</h3>

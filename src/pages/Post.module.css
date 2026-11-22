@@ -67,6 +67,19 @@
   white-space: nowrap;
 }
 
+/* ── 왼쪽 목차: 본문 왼쪽 빈 칸에, 스크롤해도 따라옴. 칸이 좁은 화면(1200 미만)에서는 숨김 ── */
+.tocColumn {
+  grid-column: 1;
+  grid-row: 1 / span 3;
+  padding: 0 40px 0 12px; /* 본문과 40 띄움 */
+}
+
+@media (max-width: 1199px) {
+  .tocColumn {
+    display: none;
+  }
+}
+
 /* ── 본문: 가운데 880 열 (긴 수식·사진이 한 줄에 들어가게 680에서 넓힘), 오른쪽에 참고문헌 ── */
 .content {
   display: grid;

@@ -122,5 +122,6 @@ export default function Markdown({ source, className = '' }) {
     photoCount = 0; // 글마다 사진 1부터
     return marked.parse(source ?? '');
   }, [source, images]);
-  return <div className={`${styles.markdown} ${className}`} dangerouslySetInnerHTML={{ __html: html }} />;
+  // data-markdown: 글 읽기 화면 목차(PostToc)가 이 안의 제목을 찾음
+  return <div className={`${styles.markdown} ${className}`} data-markdown dangerouslySetInnerHTML={{ __html: html }} />;
 }
