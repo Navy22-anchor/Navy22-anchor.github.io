@@ -101,3 +101,87 @@
     animation: none;
   }
 }
+
+/* 순서 바꾸기 (주인만): 글을 1초 꾹 누르면 들어감 */
+.item {
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* 꾹 누르는 동안 왼쪽부터 1초 동안 채워짐 */
+.item[data-holding] {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--color-accent) 14%, transparent),
+    color-mix(in srgb, var(--color-accent) 14%, transparent)
+  );
+  background-repeat: no-repeat;
+  animation: hold 1s linear forwards; /* CategoryMenu.jsx 의 HOLD 와 같게 */
+}
+
+@keyframes hold {
+  from {
+    background-size: 0% 100%;
+  }
+  to {
+    background-size: 100% 100%;
+  }
+}
+
+.row {
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.panel[data-dragging] .row[data-dragged] {
+  z-index: 1;
+  transition: none;
+}
+
+.panel[data-dragging] .row[data-dragged] .item {
+  background: var(--color-surface);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent),
+    0 8px 20px color-mix(in srgb, var(--color-black) 16%, transparent);
+}
+
+.panel[data-sorting] .item {
+  cursor: grab;
+}
+
+.panel[data-dragging] .item {
+  cursor: grabbing;
+}
+
+.grip {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--color-secondary);
+}
+
+.sortBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 4px 8px 12px;
+  color: var(--color-secondary);
+  font-size: 12px;
+}
+
+.done {
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-white, #fff);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row {
+    transition: none;
+  }
+}

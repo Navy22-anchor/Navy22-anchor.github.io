@@ -10,6 +10,7 @@ import { useCoverSizes } from '../data/coverSizes.js';
 import { addCategory, loadCategories, removeCategory, useCategories } from '../data/categories.js';
 import { useCanEdit, useSession, userName } from '../data/supabase.js';
 import { categories as baseCategories, loadRows } from '../data/projects.js';
+import { sortByOrder, usePostOrder } from '../data/postOrder.js';
 import braceLeft from '../assets/brace-left.svg';
 import braceRight from '../assets/brace-right.svg';
 import styles from './Landing.module.css';
@@ -102,9 +103,19 @@ export default function Landing() {
   const books = useBooks();
   const categories = useCategories();
   const coverSizes = useCoverSizes(books.map((book) => book.cover));
+  // 카테고리 목록(글 화면)에서 꾹 눌러 바꾼 글 순서를 글 줄에도
+  const postOrder = usePostOrder();
   const rows = useMemo(
-    () => withBooks(rowList, books, categories, coverSizes),
-    [rowList, books, categories, coverSizes],
+    () =>
+      withBooks(
+        rowList.map((row) =>
+          row.kind === 'posts' ? { ...row, items: sortByOrder(row.items, row.category, postOrder) } : row,
+        ),
+        books,
+        categories,
+        coverSizes,
+      ),
+    [rowList, books, categories, coverSizes, postOrder],
   );
   const [searchingBooks, setSearchingBooks] = useState(false);
   const [insertingName, setInsertingName] = useState(null); // 빈 줄을 끼우는 중인 카테고리 이름
