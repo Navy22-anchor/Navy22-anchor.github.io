@@ -1,5 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { CloseIcon, GlobeIcon, MinimizeIcon, PlusIcon, REFERENCE_KINDS, kindIcon } from './ReferenceIcons.jsx';
+import {
+  CiteIcon,
+  CloseIcon,
+  GlobeIcon,
+  MinimizeIcon,
+  PlusIcon,
+  REFERENCE_KINDS,
+  kindIcon,
+  referenceText,
+} from './ReferenceIcons.jsx';
 import styles from './Reference.module.css';
 
 // 왼쪽 아이콘을 누르면 종류(두루마리 / b)를 고르는 드롭다운
@@ -62,8 +71,12 @@ function KindPicker({ kind, onChange }) {
 const COLLAPSE = { duration: 500, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' };
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-// 글쓰기 화면의 참고문헌 입력창 (Figma 198:2886, 접힌 모습 214:2452)
-export default function ReferenceEditor({ references, onChange, focusIndex, collapsed, onCollapsedChange, onClose }) {
+// 글쓰기 화면의 참고문헌 입력창 (Figma 198:2886, 접힌 모습 214:2452, C 버튼 343:3101)
+// onCite(번호): 줄 끝 C 버튼. 본문에서 드래그한 문장에 이 참고문헌 번호로 밑줄 + 숫자 동그라미
+export default function ReferenceEditor({ references, onChange, focusIndex, collapsed, onCollapsedChange, onClose, onCite }) {
+  // 번호는 글에 실리는(내용이 있는) 참고문헌 순서. 빈 줄은 번호가 없음
+  let shown = 0;
+  const numbers = references.map((ref) => (referenceText(ref).trim() ? ++shown : null));
   const [linkOpen, setLinkOpen] = useState(() => new Set());
   const inputs = useRef([]);
   const card = useRef(null);
@@ -223,6 +236,19 @@ export default function ReferenceEditor({ references, onChange, focusIndex, coll
               >
                 <GlobeIcon />
               </button>
+              {onCite && (
+                <button
+                  type="button"
+                  className={`${styles.tile} ${styles.tileButton}`}
+                  disabled={numbers[i] == null}
+                  aria-label={numbers[i] == null ? '참고문헌을 먼저 입력하세요' : `드래그한 문장에 참고문헌 ${numbers[i]} 밑줄 긋기`}
+                  title={numbers[i] == null ? '참고문헌을 먼저 입력하세요' : `본문에서 드래그한 문장에 밑줄 ${numbers[i]}`}
+                  onMouseDown={(e) => e.preventDefault()} // 본문 선택을 잃지 않게
+                  onClick={() => onCite(numbers[i])}
+                >
+                  <CiteIcon />
+                </button>
+              )}
             </div>
             {linkOpen.has(i) && (
               <input

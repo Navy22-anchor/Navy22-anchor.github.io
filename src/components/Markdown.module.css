@@ -153,3 +153,46 @@
 .math :global(.katex-display) {
   margin: 0;
 }
+
+/* 인용 표시: 문장 아래 점선 밑줄 + 끝에 위첨자 숫자 동그라미 (참고문헌 번호)
+   밑줄은 border: 수식(KaTeX, inline-block)까지 이어서 그어지게 */
+.cite {
+  border-bottom: 1.5px dashed currentColor;
+  padding-bottom: 2px;
+  transition: background-color 0.15s;
+}
+
+.citeBadge {
+  /* inline-block(블록 칸)이어야 text-box 자르기가 먹음. 세로 가운데는 align-content */
+  display: inline-block;
+  align-content: center;
+  text-align: center;
+  box-sizing: border-box;
+  /* 정수 px: 소수 크기면 화면 픽셀에 맞추며 숫자가 가운데서 1px씩 밀려 보임 (Figma 14 / 10) */
+  min-width: 14px;
+  height: 14px;
+  margin-left: 2px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  /* 글꼴 위아래 여백을 잘라 숫자 높이(대문자 높이~기준선)만 남김 → 원 가운데에 정확히 */
+  text-box: trim-both cap alphabetic;
+  vertical-align: 0.5em;
+  transition: box-shadow 0.15s;
+}
+
+/* 글쓰기 화면에서 고른 인용 */
+.cite[data-active] {
+  border-bottom-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.citeBadge[data-active] {
+  background: var(--color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 30%, transparent);
+}

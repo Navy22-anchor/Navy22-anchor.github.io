@@ -284,3 +284,10 @@
     transition: none;
   }
 }
+
+/* C 버튼: 빈 줄(번호 없음)은 누를 수 없음 */
+.tileButton:disabled {
+  cursor: default;
+  opacity: 0.4;
+  filter: none;
+}

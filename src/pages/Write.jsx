@@ -5,6 +5,8 @@ import ReferenceEditor from '../components/ReferenceEditor.jsx';
 import ReferenceList from '../components/ReferenceList.jsx';
 import { referenceText } from '../components/ReferenceIcons.jsx';
 import { stringifyPost } from '../data/frontMatter.js';
+import { addCite, citesIn, moveCite, removeCite, setCiteRef } from '../data/cites.js';
+import { citeEndAt } from '../components/citeDrag.js';
 import { clearDraft, emptyDraft, formatDate, loadDraft, loadSavedDraft, postId, publishPost, saveDraft } from '../data/localPosts.js';
 import { findPost, toMarkdown } from '../data/posts.js';
 import { loadCategories } from '../data/categories.js';
@@ -346,6 +348,8 @@ export default function Write({ editId }) {
   const statusTimer = useRef(0);
   const fileRef = useRef(null);
   const uploadAt = useRef(null); // 사진 고르는 창을 열 때의 커서 위치
+  const previewRef = useRef(null);
+  const [activeCite, setActiveCite] = useState(null); // 미리보기에서 숫자 동그라미를 눌러 고른 인용 (글 안 순서)
 
   const titleRef = useAutosize(draft.title);
   const sourceRef = useAutosize(draft.markdown);
@@ -486,6 +490,141 @@ export default function Write({ editId }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [save]);
 
+  // 인용 밑줄 ---------------------------------------------------------------
+  // 본문(왼쪽)에서 문장을 드래그하고 미리보기 참고문헌의 아이콘을 누르면 그 번호로 밑줄 + 숫자 동그라미
+  // 동그라미를 눌러 고른 상태에서: 아이콘을 누르면 번호만 바꿈
+  const cite = (ref) => {
+    const el = sourceRef.current;
+    if (el.selectionStart !== el.selectionEnd) {
+      const result = addCite(draft.markdown, el.selectionStart, el.selectionEnd, ref);
+      if (result.error) return flash(result.error);
+      update({ markdown: result.value });
+      setActiveCite(null);
+      return flash(`밑줄 ${ref}을 넣었어요`);
+    }
+    if (activeCite != null) {
+      update({ markdown: setCiteRef(draft.markdown, activeCite, ref) });
+      return flash(`번호를 ${ref}(으)로 바꿨어요`);
+    }
+    flash('본문에서 밑줄 칠 문장을 먼저 드래그하세요');
+  };
+
+  // 동그라미를 고른 채로 본문에서 다시 드래그하면 밑줄 범위를 그 범위로 옮김
+  const onSourceSelectEnd = () => {
+    const el = sourceRef.current;
+    if (activeCite == null || el.selectionStart === el.selectionEnd) return;
+    const result = moveCite(draft.markdown, activeCite, el.selectionStart, el.selectionEnd);
+    if (result.error) return flash(result.error);
+    update({ markdown: result.value });
+    setActiveCite(result.index);
+  };
+
+  // 미리보기에서 동그라미를 잡고 좌우로 끌면 밑줄 끝이 실시간으로 따라옴 (살짝 누르기만 하면 고르기)
+  const suppressClick = useRef(false);
+  const onPreviewPointerDown = (e) => {
+    const badge = e.target.closest('sup[data-cite]');
+    if (!badge || e.button !== 0) return;
+    e.preventDefault(); // 끄는 동안 글자가 선택되지 않게
+    document.activeElement?.blur(); // 본문 칸에 커서가 있으면 Backspace가 거기로 가지 않게
+    const index = Number(badge.dataset.cite);
+    const c = citesIn(draft.markdown)[index];
+    if (!c) return;
+    const plain = removeCite(draft.markdown, index); // 밑줄을 뗀 원문 (끄는 동안 기준)
+    const root = previewRef.current;
+    const origin = { x: e.clientX, y: e.clientY };
+    let dragging = false;
+    let frame = 0;
+    let last = null;
+    const apply = () => {
+      frame = 0;
+      const end = citeEndAt(root, index, plain, c.start, last.clientX, last.clientY);
+      if (end == null) return;
+      // 끝까지 줄이면 밑줄과 동그라미를 지우고 끌기를 끝냄 (문장은 남김)
+      if (end === -1) {
+        setDraft((d) => ({ ...d, markdown: plain }));
+        setActiveCite(null);
+        flash('밑줄을 지웠어요');
+        finish();
+        return;
+      }
+      const result = addCite(plain, c.start, end, c.ref);
+      if (!result.error) setDraft((d) => (d.markdown === result.value ? d : { ...d, markdown: result.value }));
+    };
+    const move = (ev) => {
+      if (!dragging) {
+        if (Math.hypot(ev.clientX - origin.x, ev.clientY - origin.y) < 4) return;
+        dragging = true;
+        root.dataset.citeDragging = '';
+        setActiveCite(index);
+      }
+      last = ev;
+      if (!frame) frame = requestAnimationFrame(apply);
+    };
+    // 끌기 끝: 손을 뗐거나, 끝까지 줄여 지웠을 때
+    const finish = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      cancelAnimationFrame(frame);
+      frame = 0;
+      delete root.dataset.citeDragging;
+    };
+    const up = () => {
+      if (!dragging) return finish();
+      if (frame) {
+        cancelAnimationFrame(frame);
+        apply(); // 아직 반영 안 된 마지막 움직임
+      }
+      finish();
+      // 끈 뒤 따라오는 click은 고르기·풀기로 치지 않음
+      suppressClick.current = true;
+      setTimeout(() => (suppressClick.current = false));
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  };
+
+  // 미리보기에서 동그라미를 누르면 고름, 다른 곳을 누르면 풂
+  const onPreviewClick = (e) => {
+    if (suppressClick.current) return;
+    if (e.target.closest('button, a')) return; // 참고문헌 아이콘(번호 바꾸기)·링크는 고른 채로 둠
+    const badge = e.target.closest('sup[data-cite]');
+    if (!badge) return setActiveCite(null);
+    const index = Number(badge.dataset.cite);
+    setActiveCite((cur) => (cur === index ? null : index));
+    // 남아 있던 본문 선택은 접어, 아이콘을 누르면 새 밑줄이 아니라 번호 바꾸기가 되게
+    const el = sourceRef.current;
+    el.setSelectionRange(el.selectionEnd, el.selectionEnd);
+  };
+
+  // 고른 인용 표시 (미리보기는 글이 바뀔 때만 다시 그려지므로 직접 붙임)
+  useEffect(() => {
+    const root = previewRef.current;
+    if (!root) return;
+    for (const node of root.querySelectorAll('[data-cite][data-active]')) delete node.dataset.active;
+    if (activeCite == null) return;
+    const nodes = root.querySelectorAll(`[data-cite="${activeCite}"]`);
+    if (!nodes.length) return setActiveCite(null); // 지워졌음
+    for (const node of nodes) node.dataset.active = '';
+  }, [activeCite, draft.markdown]);
+
+  // 고른 상태에서 Backspace·Delete: 밑줄과 동그라미를 지움 (문장은 남김), Esc: 고르기 풂
+  useEffect(() => {
+    if (activeCite == null) return;
+    const onKey = (e) => {
+      if (e.target.closest?.('input, textarea, [contenteditable="true"]')) return;
+      if (e.key === 'Escape') setActiveCite(null);
+      if (e.key !== 'Backspace' && e.key !== 'Delete') return;
+      e.preventDefault();
+      setDraft((d) => ({ ...d, markdown: removeCite(d.markdown, activeCite) }));
+      setActiveCite(null);
+      flash('밑줄을 지웠어요');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [activeCite]);
+
   const onSourceKeyDown = (e) => {
     if (!(e.ctrlKey || e.metaKey)) return;
     const tool = { b: TOOLS[0], i: TOOLS[1] }[e.key.toLowerCase()];
@@ -507,7 +646,7 @@ export default function Write({ editId }) {
         <p className={styles.pill}>{original ? '글 수정' : '글 작성'}</p>
         <div className={styles.actions}>
           <span className={styles.status} role="status">
-            {status}
+            {status || (activeCite != null ? '동그라미를 좌우로 끌면 범위 변경 · Backspace 지우기 · Esc' : '')}
           </span>
           <button type="button" className={styles.pill} onClick={save} disabled={isEmpty}>
             임시저장
@@ -582,6 +721,8 @@ export default function Write({ editId }) {
             value={draft.markdown}
             onChange={(e) => update({ markdown: e.target.value })}
             onKeyDown={onSourceKeyDown}
+            onMouseUp={onSourceSelectEnd}
+            onKeyUp={(e) => e.shiftKey && onSourceSelectEnd()}
             onPaste={(e) => {
               if (![...e.clipboardData.files].some((file) => file.type.startsWith('image/'))) return;
               e.preventDefault();
@@ -612,6 +753,7 @@ export default function Write({ editId }) {
               focusIndex={refFocus}
               collapsed={refCollapsed}
               onCollapsedChange={setRefCollapsed}
+              onCite={cite}
               onClose={() => {
                 // 닫을 때 비어 있는 칸은 정리
                 update({ references: draft.references.filter((ref) => referenceText(ref).trim() || ref.url) });
@@ -626,14 +768,16 @@ export default function Write({ editId }) {
           )}
         </section>
 
-        <section className={styles.preview} aria-label="미리보기">
+        <section ref={previewRef} className={styles.preview} aria-label="미리보기" onClick={onPreviewClick}
+          onPointerDown={onPreviewPointerDown}
+        >
           <p className={styles.previewLabel}>미리보기</p>
           <h1 className={styles.previewTitle} data-empty={!draft.title || undefined}>
             {draft.title || '글 제목'}
           </h1>
           <p className={styles.previewByline}>by {draft.author || '작성자 이름'}</p>
           <Markdown source={draft.markdown} className={styles.previewBody} />
-          <ReferenceList references={references} className={styles.previewRefs} />
+          <ReferenceList references={references} className={styles.previewRefs} onCite={cite} />
         </section>
       </div>
     </div>

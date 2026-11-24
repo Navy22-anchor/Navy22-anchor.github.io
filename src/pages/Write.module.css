@@ -317,6 +317,23 @@
   margin-top: 8px;
 }
 
+/* 미리보기의 숫자 동그라미: 눌러서 고름 (Backspace 지우기), 좌우로 끌어 밑줄 범위 바꾸기 */
+.previewBody sup[data-cite] {
+  cursor: ew-resize;
+  user-select: none;
+  touch-action: none;
+}
+
+/* 끄는 동안: 동그라미가 마우스 아래 글자를 가리지 않게 (마우스 아래 글자 자리를 찾을 때) */
+.preview[data-cite-dragging] {
+  cursor: ew-resize;
+  user-select: none;
+}
+
+.preview[data-cite-dragging] sup[data-cite] {
+  pointer-events: none;
+}
+
 /* 좁은 화면: 원본 아래에 미리보기, 도구는 예전처럼 가로 막대 */
 @media (max-width: 1000px) {
   /* 좁은 화면에선 미리보기가 아래에 이어지므로 화면 높이까지 늘리지 않음 */

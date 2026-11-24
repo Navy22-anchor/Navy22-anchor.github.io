@@ -87,6 +87,24 @@ const marked = new Marked({
       },
       renderer: (token) => math(token.text, false),
     },
+    // <cite ref="N">문장</cite> → 점선 밑줄 + 끝에 위첨자 숫자 동그라미 (참고문헌 N번)
+    // data-cite: 글 안에서 몇 번째 인용인지 (글쓰기 화면에서 눌러 고를 때 씀)
+    {
+      name: 'cite',
+      level: 'inline',
+      start: (src) => src.indexOf('<cite'),
+      tokenizer(src) {
+        const m = /^<cite ref="(\d+)">([\s\S]+?)<\/cite>/.exec(src);
+        if (m) return { type: 'cite', raw: m[0], ref: m[1], tokens: this.lexer.inlineTokens(m[2]) };
+      },
+      renderer(token) {
+        const i = citeCount++;
+        return (
+          `<span class="${styles.cite}" data-cite="${i}">${this.parser.parseInline(token.tokens)}</span>` +
+          `<sup class="${styles.citeBadge}" data-cite="${i}" aria-label="참고문헌 ${token.ref}">${token.ref}</sup>`
+        );
+      },
+    },
   ],
   renderer: {
     // 글 안의 HTML: 안전한 태그만 살림. 블록(줄 전체가 HTML)은 감싸서 사진을 양옆으로 띄울 수 있게
@@ -115,11 +133,13 @@ const marked = new Marked({
 
 // 지금 그리는 글에서 몇 번째 사진인지
 let photoCount = 0;
+let citeCount = 0;
 
 export default function Markdown({ source, className = '' }) {
   const images = useSyncExternalStore(subscribeImages, imagesVersion);
   const html = useMemo(() => {
     photoCount = 0; // 글마다 사진 1부터
+    citeCount = 0;
     return marked.parse(source ?? '');
   }, [source, images]);
   // data-markdown: 글 읽기 화면 목차(PostToc)가 이 안의 제목을 찾음
