@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import CategoryMenu from '../components/CategoryMenu.jsx';
+import DraftMenu from '../components/DraftMenu.jsx';
 import PostToc from '../components/PostToc.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import Markdown from '../components/Markdown.jsx';
@@ -82,6 +83,8 @@ export default function Post({ id }) {
           </a>
         )}
         <div className={`${styles.headerSide} ${styles.headerRight}`}>
+          {/* 보관함: 임시저장한 글 목록 */}
+          <DraftMenu className={styles.iconButton} />
           <a href={`/write/${post.id}`} className={styles.iconButton} aria-label="글 수정">
             <img src={penIcon} alt="" width="24" height="24" />
           </a>

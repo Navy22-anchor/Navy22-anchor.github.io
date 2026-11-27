@@ -28,11 +28,11 @@
   padding: 20px 32px;
 }
 
-/* 양옆 묶음을 같은 너비(64)로 두어 가운데 알약이 항상 정가운데 */
+/* 양옆 묶음을 같은 너비(104 = 아이콘 셋)로 두어 가운데 알약이 항상 정가운데 */
 .headerSide {
   display: flex;
   gap: 16px;
-  width: 64px;
+  width: 104px;
 }
 
 .headerRight {
