@@ -6,6 +6,7 @@
   --write-surface: var(--color-fill);
   --write-accent: var(--color-accent);
   --write-scrollbar: rgb(0 0 0 / 0.3);
+  --write-progress: #0bd029;
 
   min-height: 100vh;
   color: var(--color-text);
@@ -76,6 +77,41 @@
   margin-right: 8px;
   color: var(--write-muted);
   font-size: 13px;
+}
+
+/* 임시저장 프로그래스 바 (Figma "Top line"): 상단 바 바로 아래 1px 초록 줄
+   저장 중: 왼쪽부터 천천히 차오르며 90% 앞에서 기다림
+   저장 끝(data-done): 그 순간 끝까지 차고, 잠깐 뒤 사라짐 */
+.progress {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--write-progress);
+  transform-origin: left;
+  pointer-events: none;
+  animation: progressWait 2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.progress[data-done] {
+  transform: scaleX(1);
+  animation: progressFade 0.3s ease-out 0.4s both;
+}
+
+@keyframes progressWait {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(0.9);
+  }
+}
+
+@keyframes progressFade {
+  to {
+    opacity: 0;
+  }
 }
 
 /* ── 왼쪽 원본 / 오른쪽 미리보기 (600 + 40 + 600) ── */

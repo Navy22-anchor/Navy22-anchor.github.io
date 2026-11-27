@@ -416,8 +416,23 @@ export default function Write({ editId }) {
     update({ markdown: result.value });
   };
 
+  // 임시저장 프로그래스 바: 누르면 줄이 나타나 차오르기 시작하고(saving),
+  // 실제로 저장이 끝난 순간 끝까지 참(done). 저장에 실패하면 줄을 거둠
+  // 줄이 먼저 화면에 그려진 뒤 저장 (화면이 그려지지 않는 상황이면 늦어도 50ms 뒤엔 저장)
+  const [progress, setProgress] = useState(null); // { id, done }
   const save = useCallback(() => {
-    flash(saveDraft(draft, original?.id) ? `임시저장됨 ${formatDate().slice(-5)}` : '저장하지 못했어요');
+    const id = Date.now();
+    setProgress({ id, done: false });
+    let started = false;
+    const run = () => {
+      if (started) return;
+      started = true;
+      const ok = saveDraft(draft, original?.id);
+      setProgress((p) => (p?.id !== id ? p : ok ? { id, done: true } : null));
+      flash(ok ? `임시저장됨 ${formatDate().slice(-5)}` : '저장하지 못했어요');
+    };
+    requestAnimationFrame(() => setTimeout(run, 0));
+    setTimeout(run, 50);
   }, [draft, original]);
 
   const publish = () => {
@@ -655,6 +670,9 @@ export default function Write({ editId }) {
             발행
           </button>
         </div>
+        {progress && (
+          <span key={progress.id} className={styles.progress} data-done={progress.done || undefined} aria-hidden="true" />
+        )}
       </header>
 
       {pending && (
