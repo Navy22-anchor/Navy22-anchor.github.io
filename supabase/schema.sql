@@ -188,3 +188,46 @@ drop policy if exists "주인만 수정" on public.site_settings;
 create policy "누구나 읽기" on public.site_settings for select to anon, authenticated using (true);
 create policy "주인만 추가" on public.site_settings for insert to authenticated with check ((select public.is_owner()));
 create policy "주인만 수정" on public.site_settings for update to authenticated using ((select public.is_owner())) with check ((select public.is_owner()));
+
+-- 임시저장한 글 (글쓰기 화면의 임시저장·보관함). 로그인한 계정 본인만 읽고 쓸 수 있음 (방문자에게 안 보임)
+-- 다른 기기·브라우저에서 로그인해도 보관함에 같은 글이 보이도록. 브라우저(localStorage)에도 그대로 남겨 둠
+-- slot: 새 글은 'new', 기존 글 수정은 그 글의 id. value: { title, author, markdown, references }
+create table if not exists public.drafts (
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  slot text not null,
+  value jsonb not null,
+  saved_at timestamptz not null default now(),
+  primary key (user_id, slot)
+);
+
+alter table public.drafts enable row level security;
+grant select, insert, update, delete on public.drafts to authenticated;
+
+drop policy if exists "본인만 읽기" on public.drafts;
+drop policy if exists "본인만 추가" on public.drafts;
+drop policy if exists "본인만 수정" on public.drafts;
+drop policy if exists "본인만 삭제" on public.drafts;
+create policy "본인만 읽기" on public.drafts for select to authenticated using (user_id = (select auth.uid()));
+create policy "본인만 추가" on public.drafts for insert to authenticated with check (user_id = (select auth.uid()));
+create policy "본인만 수정" on public.drafts for update to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+create policy "본인만 삭제" on public.drafts for delete to authenticated using (user_id = (select auth.uid()));
+
+-- 임시저장 글의 사진 보관함 (Storage, 비공개): 파일 자리 <계정 id>/<파일 이름>, 본인만 보고·올리고·지움
+-- 발행하면 사진은 저장소 public/images/posts/ 에 커밋되니, 여기는 발행 전 임시저장용
+insert into storage.buckets (id, name, public)
+values ('draft-images', 'draft-images', false)
+on conflict (id) do update set public = false;
+
+drop policy if exists "임시 사진 본인만 보기" on storage.objects;
+drop policy if exists "임시 사진 본인만 올리기" on storage.objects;
+drop policy if exists "임시 사진 본인만 바꾸기" on storage.objects;
+drop policy if exists "임시 사진 본인만 지우기" on storage.objects;
+create policy "임시 사진 본인만 보기" on storage.objects for select to authenticated
+  using (bucket_id = 'draft-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
+create policy "임시 사진 본인만 올리기" on storage.objects for insert to authenticated
+  with check (bucket_id = 'draft-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
+create policy "임시 사진 본인만 바꾸기" on storage.objects for update to authenticated
+  using (bucket_id = 'draft-images' and (storage.foldername(name))[1] = (select auth.uid())::text)
+  with check (bucket_id = 'draft-images' and (storage.foldername(name))[1] = (select auth.uid())::text);
+create policy "임시 사진 본인만 지우기" on storage.objects for delete to authenticated
+  using (bucket_id = 'draft-images' and (storage.foldername(name))[1] = (select auth.uid())::text);

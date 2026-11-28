@@ -7,7 +7,8 @@ import { referenceText } from '../components/ReferenceIcons.jsx';
 import { stringifyPost } from '../data/frontMatter.js';
 import { addCite, citesIn, moveCite, removeCite, setCiteRef } from '../data/cites.js';
 import { citeEndAt } from '../components/citeDrag.js';
-import { clearDraft, emptyDraft, formatDate, loadDraft, loadSavedDraft, postId, publishPost, saveDraft } from '../data/localPosts.js';
+import { clearDraft, emptyDraft, formatDate, loadDraft, loadSavedDraft, postId, publishPost, saveDraft, syncDrafts } from '../data/localPosts.js';
+import { supabase } from '../data/supabase.js';
 import { findPost, toMarkdown } from '../data/posts.js';
 import { loadCategories } from '../data/categories.js';
 import { TOKEN_HELP_URL, clearToken, commitPost, loadToken, saveToken } from '../data/github.js';
@@ -356,6 +357,19 @@ export default function Write({ editId }) {
 
   const update = (patch) => setDraft((d) => ({ ...d, ...patch }));
 
+  // 다른 기기에서 임시저장한 글을 가져오면, 아직 아무것도 안 고쳤을 때만 그 내용으로 바꿈
+  const firstDraft = useRef(draft);
+  useEffect(() => {
+    let live = true;
+    syncDrafts().then(() => {
+      if (!live) return;
+      setDraft((d) => (d !== firstDraft.current ? d : original ? loadEditDraft(original.id) : loadDraft()));
+    });
+    return () => {
+      live = false;
+    };
+  }, [original]);
+
   // 툴바로 바꾼 뒤 선택 범위를 되살림
   useLayoutEffect(() => {
     const sel = pendingSelection.current;
@@ -424,12 +438,20 @@ export default function Write({ editId }) {
     const id = Date.now();
     setProgress({ id, done: false });
     let started = false;
-    const run = () => {
+    const run = async () => {
       if (started) return;
       started = true;
-      const ok = saveDraft(draft, original?.id);
-      setProgress((p) => (p?.id !== id ? p : ok ? { id, done: true } : null));
-      flash(ok ? `임시저장됨 ${formatDate().slice(-5)}` : '저장하지 못했어요');
+      // 로그인해 있으면 Supabase에 올라갈 때까지 기다림 (다른 기기에서도 보임)
+      const result = await saveDraft(draft, original?.id);
+      setProgress((p) => (p?.id !== id ? p : result ? { id, done: true } : null));
+      const time = formatDate().slice(-5);
+      flash(
+        result === 'synced' || (result === 'local' && !supabase)
+          ? `임시저장됨 ${time}`
+          : result === 'local'
+            ? `이 브라우저에만 임시저장됨 ${time}`
+            : '저장하지 못했어요',
+      );
     };
     requestAnimationFrame(() => setTimeout(run, 0));
     setTimeout(run, 50);

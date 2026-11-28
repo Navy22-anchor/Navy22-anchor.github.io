@@ -1,5 +1,7 @@
 // 글에 직접 올린 사진. 발행 전까지는 이 브라우저(IndexedDB)에만 두고, 발행할 때 글과 함께
 // 저장소의 public/images/posts/ 에 커밋합니다. 글에는 /images/posts/<파일 이름> 주소로 들어갑니다.
+import { getSession, supabase } from './supabase.js';
+
 const DB_NAME = 'hanlog';
 const STORE = 'images';
 export const IMAGE_DIR = '/images/posts/';
@@ -44,8 +46,8 @@ export const subscribeImages = (listener) => {
 export const imagesVersion = () => version;
 export const localImageUrl = (src) => urls.get(src);
 
-// 저장해 둔 사진을 처음에 한 번 불러옴
-(async () => {
+// 저장해 둔 사진을 처음에 한 번 불러옴 (다 불러오기 전에는 다른 기기 사진을 받지 않음)
+const loaded = (async () => {
   try {
     const keys = await withStore('readonly', (store) => store.getAllKeys());
     const blobs = await withStore('readonly', (store) => store.getAll());
@@ -107,4 +109,69 @@ export function imagesIn(markdown) {
   const found = new Set();
   for (const m of markdown.matchAll(/\]\((\/images\/posts\/[^)\s]+)\)/g)) found.add(m[1]);
   return [...found];
+}
+
+// ── 임시저장 글의 사진을 다른 기기에서도 보이게 (Supabase Storage draft-images, 로그인한 본인만) ──
+// 파일 자리: <내 계정 id>/<파일 이름>. 올린 사진은 이 브라우저에 기억해 두고 다시 올리지 않음
+const BUCKET = 'draft-images';
+const UPLOADED = 'hanlog:uploaded-images';
+const nameOf = (src) => src.slice(IMAGE_DIR.length);
+const pathOf = (src) => `${getSession().user.id}/${nameOf(src)}`;
+
+function uploadedSet() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(UPLOADED)) ?? []);
+  } catch {
+    return new Set();
+  }
+}
+
+// 글에 들어간 사진 중 아직 안 올린 것을 올림. 하나라도 못 올리면 false
+export async function uploadImages(srcs) {
+  if (!supabase || !getSession() || !srcs.length) return true;
+  await loaded;
+  const done = uploadedSet();
+  let ok = true;
+  for (const src of srcs) {
+    if (done.has(src)) continue;
+    const blob = await loadImageBlob(src);
+    if (!blob) continue; // 이 브라우저에 없는 사진(이미 저장소에 있는 사진 등)
+    const { error } = await supabase.storage.from(BUCKET).upload(pathOf(src), blob, { contentType: blob.type, upsert: true });
+    if (error) ok = false;
+    else done.add(src);
+  }
+  try {
+    localStorage.setItem(UPLOADED, JSON.stringify([...done]));
+  } catch {
+    // 못 남기면 다음에 다시 올림 (덮어쓰기라 괜찮음)
+  }
+  return ok;
+}
+
+// 이 브라우저에 없는 사진을 받아 옴 (다른 기기에서 임시저장한 글의 사진)
+export async function fetchImages(srcs) {
+  if (!supabase || !getSession() || !srcs.length) return;
+  await loaded;
+  const done = uploadedSet();
+  let got = false;
+  for (const src of srcs) {
+    if (urls.has(src)) continue;
+    const { data: blob, error } = await supabase.storage.from(BUCKET).download(pathOf(src));
+    if (error || !blob) continue; // 저장소에 이미 올라간 사진이면 여기 없음 (주소로 바로 보임)
+    urls.set(src, URL.createObjectURL(blob));
+    done.add(src); // 이미 올라가 있으니 다시 올리지 않음
+    got = true;
+    try {
+      await withStore('readwrite', (store) => store.put(blob, src));
+    } catch {
+      // 저장소를 못 쓰면 이번 화면에서만 보임
+    }
+  }
+  if (!got) return;
+  try {
+    localStorage.setItem(UPLOADED, JSON.stringify([...done]));
+  } catch {
+    // 못 남겨도 다음에 덮어쓰기로 다시 올릴 뿐
+  }
+  emit();
 }
